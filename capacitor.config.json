@@ -2,7 +2,6 @@
   "appId": "com.ecole.saisienotes",
   "appName": "Saisie Notes",
   "webDir": "www",
-  "backgroundColor": "#1E3A8A",
   "android": {
     "allowMixedContent": false
   },
