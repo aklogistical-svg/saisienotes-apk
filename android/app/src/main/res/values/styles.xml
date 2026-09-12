@@ -24,6 +24,9 @@
              affiche son propre splash par défaut (icône + fond bleu dérivé automatiquement). -->
         <item name="windowSplashScreenBackground">#FFFFFF</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Temps avant transition vers postSplashScreenTheme (ms) -->
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <!-- Fond blanc pendant l'amorçage pour éviter le flash bleu -->
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
