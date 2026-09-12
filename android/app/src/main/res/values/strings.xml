@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Saisie Notes</string>
+    <string name="title_activity_main">Saisie Notes</string>
+    <string name="package_name">com.ecole.saisienotes</string>
+    <string name="custom_url_scheme">com.ecole.saisienotes</string>
+</resources>

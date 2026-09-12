@@ -1,0 +1,37 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Zone de sécurité adaptative Android : contenu centré à ~66% du canevas -->
+  <g transform="translate(512,512) scale(0.68) translate(-512,-462)">
+    <defs>
+      <linearGradient id="sheet" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#FFFFFF"/>
+        <stop offset="100%" stop-color="#F1F5F9"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Feuille / carnet de notes -->
+    <rect x="292" y="222" width="440" height="580" rx="28" fill="url(#sheet)" stroke="#0F2557" stroke-width="10"/>
+    <rect x="292" y="222" width="56" height="580" rx="28" fill="#2563EB"/>
+
+    <rect x="392" y="330" width="280" height="26" rx="13" fill="#CBD5E1"/>
+    <rect x="392" y="392" width="200" height="26" rx="13" fill="#CBD5E1"/>
+
+    <rect x="392" y="470" width="180" height="26" rx="13" fill="#94A3B8"/>
+    <circle cx="642" cy="483" r="26" fill="#16A34A"/>
+    <path d="M629 483 L639 493 L657 470" stroke="#FFFFFF" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="548" width="180" height="26" rx="13" fill="#94A3B8"/>
+    <circle cx="642" cy="561" r="26" fill="#F59E0B"/>
+
+    <rect x="392" y="626" width="180" height="26" rx="13" fill="#94A3B8"/>
+    <circle cx="642" cy="639" r="26" fill="#16A34A"/>
+    <path d="M629 639 L639 649 L657 626" stroke="#FFFFFF" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g transform="translate(700,700)">
+      <circle cx="0" cy="0" r="92" fill="#0F2557"/>
+      <path d="M-58 -8 L0 -34 L58 -8 L0 18 Z" fill="#FFFFFF"/>
+      <path d="M-40 2 L-40 30 Q0 46 40 30 L40 2 L0 20 Z" fill="#DBEAFE"/>
+      <line x1="58" y1="-8" x2="58" y2="26" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="58" cy="30" r="6" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,25 @@
+{
+  "name": "saisienotes-apk",
+  "version": "1.0.0",
+  "description": "App native Android (Capacitor) — Saisie de notes hors-ligne",
+  "private": true,
+  "scripts": {
+    "build:bundle": "esbuild capacitor-entry.js --bundle --outfile=www/capacitor-bundle.js --platform=browser --format=iife",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "build:apk": "npm run build:bundle && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/share": "^8.0.1",
+    "@capawesome/capacitor-file-picker": "^8.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "esbuild": "^0.28.2"
+  }
+}
