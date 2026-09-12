@@ -1,0 +1,3261 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AdminSchool extension</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent:       #00c97a;
+    --accent-dim:   #009f60;
+    --danger:       #e74c3c;
+    --warn:         #f39c12;
+    --bg:           #f0f4f8;
+    --card:         #ffffff;
+    --muted:        #8a95a3;
+    --header-bg:    #1b2b42;
+    --header-glass: rgba(15,28,46,0.97);
+    --primary:      #2d7cf6;
+    --primary-glow: rgba(45,124,246,0.25);
+    --toolbar-bg:   #e8f0fa;
+    --border:       rgba(0,0,0,0.07);
+    --shadow-sm:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:    0 4px 16px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06);
+    --shadow-lg:    0 12px 40px rgba(0,0,0,0.15);
+    --radius:       10px;
+    --radius-sm:    6px;
+    --header-h:     0px; /* set by JS */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: #1a2332;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  header {
+    background: var(--header-bg);
+    color: #fff;
+    padding: .65rem .8rem .5rem;
+    position: relative;
+    transform: translateY(0);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
+    display: grid;
+    grid-template-columns: auto 1fr repeat(3, auto);
+    gap: .35rem;
+    align-items: center;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  }
+  .header-hidden { transform: translateY(-100%); }
+
+  header h2 {
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    padding-right: .5rem;
+    opacity: .85;
+    transition: opacity .2s;
+  }
+  header h2:hover { opacity: 1; }
+
+  .header-spacer { flex: 1; }
+
+  .hbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-width: 44px;
+    min-height: 44px;
+    padding: .5rem .7rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.13);
+    background: rgba(255,255,255,0.06);
+    color: #dce8ff;
+    font-size: .78rem;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .18s, border-color .18s, transform .12s;
+    white-space: nowrap;
+  }
+  .hbtn:hover {
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.25);
+  }
+  .hbtn:active { transform: scale(.96); }
+  .hbtn:disabled, .hbtn.is-busy {
+    opacity: .5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .hbtn .ico {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    display: inline-flex;
+  }
+  .hbtn .ico svg { width: 100%; height: 100%; display: block; }
+  .hbtn .txt { line-height: 1; }
+
+  /* Icône seule sous 768px : la place manque pour le texte (voir media query responsive) */
+
+  /* infosource row */
+  .infosource {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding-top: .35rem;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    margin-top: .1rem;
+    font-size: .78rem;
+    color: rgba(255,255,255,0.55);
+  }
+  .infosource button { margin: 0; }
+
+  /* ── TOGGLE HEADER BTN ── pill that sticks to header bottom edge */
+  .toggleheader {
+    position: fixed;
+    /* anchored under header, right side */
+    top: 0;          /* adjusted by JS */
+    right: 14px;
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 24px;
+    padding: 0;
+    border-radius: 0 0 14px 14px;
+    background: var(--header-bg);
+    color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    cursor: pointer;
+    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), background .15s;
+  }
+  .toggleheader:hover { background: #1a2d45; }
+  .toggleheader:active { background: #243c5a; }
+  .toggleheader .ico {
+    width: 16px; height: 16px; display: inline-flex;
+    transition: transform .3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .toggleheader .ico svg { width: 100%; height: 100%; display: block; }
+  .toggleheader.is-hidden .ico { transform: rotate(180deg); }
+
+  /* ── MAIN ────────────────────────────────────────────── */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: margin-top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── TOOLBAR ─────────────────────────────────────────── */
+  .toolbar {
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border);
+    padding: .5rem .7rem;
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: .8rem;
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-weight: 500;
+    color: #4a5568;
+  }
+
+  select {
+    padding: .25rem .5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid #cbd5e0;
+    background: #fff;
+    font-family: inherit;
+    font-size: .8rem;
+    color: #1a2332;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  #msgstate {
+    background: transparent;
+    font-size: .78rem;
+    color: var(--muted);
+    font-style: italic;
+    padding: .2rem .4rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── TABLE ───────────────────────────────────────────── */
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+  }
+  .table-wrap::-webkit-scrollbar { width: 5px; }
+  .table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .table-wrap::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 99px; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { padding: .45rem .5rem; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: .88rem; }
+  th {
+    position: sticky; top: 0;
+    background: #1e3a5f;
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+    font-size: .78rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    z-index: 2;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.1);
+  }
+  td input { width: 100%; border: 0; text-align: center; background: transparent; font-family: 'DM Mono', monospace; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:hover { background: #eef4ff; }
+
+  /* ── CARDS ───────────────────────────────────────────── */
+  .cards-wrap { display: none; flex-direction: column; gap: .6rem; padding: .6rem; overflow-y: auto; }
+  .card { background: var(--card); border-radius: var(--radius); padding: .7rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+  .card-header { font-weight: 600; font-size: .82rem; margin-bottom: .4rem; color: #4a5568; }
+  .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; font-size: .88rem; }
+  .card-grid input { width: 100%; padding: .25rem; border: 1px solid #e2e8f0; border-radius: .3rem; text-align: center; font-family: 'DM Mono', monospace; transition: border-color .18s; }
+  .card-grid input:focus { outline: none; border-color: var(--primary); }
+
+  .note-zero   { background: rgba(231,76,60,.18); }
+  .note-invalid { background: rgba(243,156,18,.25); }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: .4rem .7rem;
+    text-align: center;
+    font-size: .72rem;
+    color: var(--muted);
+  }
+
+  /* ── STATUS / BADGE ──────────────────────────────────── */
+  .status-mgs { font-size: .8rem; color: var(--muted); }
+  #effectif { font-size: .78rem; font-weight: 600; color: var(--primary); }
+
+  /* ── OVERLAYS & MODALS ───────────────────────────────── */
+  #OverlayWrap, #permiOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #OverlayWrap[hidden], #permiOverlay[hidden] { display: none; }
+  .overlayText { background: #fff; padding: 18px 28px; font-size: 15px; font-weight: 600; color: #1a2332; }
+  .overlay-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 2rem 2.4rem;
+    display: flex; flex-direction: column;
+    align-items: center; gap: .9rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); 
+    transform: scale(.93);
+  }
+  /* Barre indéterminée */
+  .bar-progress {
+    width: 160px; height: 3px;
+    background: #e8eef5; border-radius: 99px; overflow: hidden;
+  }
+  .bar-progress::after {
+    content: ''; display: block;
+    height: 100%; width: 42%;
+    background: var(--primary); border-radius: 99px;
+    animation: bar-slide 3.1s ease-in-out infinite;
+  }
+  @keyframes bar-slide {
+    0%   { transform: translateX(-130%); }
+    100% { transform: translateX(200%); }
+  }
+
+  /* ── TOASTS ──────────────────────────────────────────── */
+  .toast-wrap {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: 1.2rem; z-index: 10010;
+    display: flex; gap: .4rem; flex-direction: column; align-items: center;
+    width: min(92vw, 440px);
+  }
+  /* Toast de base */
+  .toast {
+    width: 100%;
+    padding: .6rem 1rem;
+    border-radius: 12px; color: #fff;
+    font-size: .82rem; font-weight: 500;
+    box-shadow: var(--shadow-md);
+    opacity: 0; transform: translateY(12px) scale(.95);
+    transition: opacity .25s cubic-bezier(0.4,0,0.2,1),
+                transform .25s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+  .toast.success { background: var(--accent); }
+  .toast.warn    { background: var(--warn); color: #111; }
+
+  /* Toast d'erreur actionnable */
+  .toast.error {
+    background: #1e2736;
+    border: 1px solid rgba(231,76,60,0.45);
+    padding: .75rem 1rem .65rem;
+  }
+  .toast-err-top {
+    display: flex; align-items: flex-start; gap: .5rem; margin-bottom: .55rem;
+  }
+  .toast-err-icon {
+    font-size: 1rem; flex-shrink: 0; margin-top: 1px;
+  }
+  .toast-err-body { flex: 1; min-width: 0; }
+  .toast-err-title {
+    font-size: .82rem; font-weight: 600; color: #fca5a5;
+    margin-bottom: .18rem; line-height: 1.3;
+  }
+  .toast-err-detail {
+    font-size: .76rem; color: rgba(255,255,255,0.65); line-height: 1.45;
+    word-break: break-word;
+  }
+  .toast-err-close {
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.35); font-size: 1rem; line-height: 1;
+    padding: 0; flex-shrink: 0; transition: color .15s;
+  }
+  .toast-err-close:hover { color: #fff; }
+  /* Variante succès actionnable (même layout que .toast.error, couleurs vertes) */
+  .toast.success.actionable {
+    background: #1e2736;
+    border: 1px solid rgba(34,197,94,0.45);
+    padding: .75rem 1rem .65rem;
+  }
+  .toast.success.actionable .toast-err-title { color: #86efac; }
+  /* Barre de séparation */
+  .toast-err-sep {
+    height: 1px; background: rgba(255,255,255,0.08); margin-bottom: .5rem;
+  }
+  /* Actions */
+  .toast-err-actions {
+    display: flex; gap: .4rem; flex-wrap: wrap;
+  }
+  .toast-action-btn {
+    padding: .3rem .72rem; border-radius: 8px;
+    font-family: inherit; font-size: .76rem; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  .toast-action-btn:active { transform: scale(.95); }
+  /* Primaire */
+  .tab-primary {
+    background: var(--danger); color: #fff; border-color: transparent;
+  }
+  .tab-primary:hover { background: #c0392b; }
+  /* Secondaire (outline) */
+  .tab-secondary {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.8);
+    border-color: rgba(255,255,255,0.18);
+  }
+  .tab-secondary:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); }
+  /* Correction (accent bleu) */
+  .tab-fix {
+    background: rgba(45,124,246,0.2); color: #93c5fd;
+    border-color: rgba(45,124,246,0.35);
+  }
+  .tab-fix:hover { background: rgba(45,124,246,0.35); }
+
+  /* Anneau de correction sur cellule fautive */
+  @keyframes fix-pulse {
+    0%,100% { box-shadow: 0 0 0 2px rgba(231,76,60,0.9), 0 0 0 5px rgba(231,76,60,0.25); }
+    50%      { box-shadow: 0 0 0 3px rgba(231,76,60,1),   0 0 0 8px rgba(231,76,60,0.15); }
+  }
+  .cell-fix-highlight {
+    animation: fix-pulse 1.2s ease-in-out infinite !important;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  /* ── PAVÉ NUMÉRIQUE MOBILE ───────────────────────────── */
+  #numpadBackdrop {
+    display: none;
+    position: fixed; inset: 0; z-index: 11100;
+    background: rgba(10,18,35,0.1);
+    backdrop-filter: blur(1px);
+    touch-action: none;
+  }
+  #numpadBackdrop.open { display: block; }
+
+  #numpadSheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 11101;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 40px rgba(0,0,0,0.18);
+    transform: translateY(100%);
+    transition: transform .28s cubic-bezier(0.4,0,0.2,1);
+    user-select: none;
+    touch-action: pan-y;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  #numpadSheet.open { transform: translateY(0); }
+
+  /* Poignée swipe */
+  .np-handle-wrap {
+    display: flex; align-items: center; justify-content: center;
+    padding: .55rem 0 .3rem; position: relative;
+  }
+  .np-handle {
+    width: 38px; height: 4px; border-radius: 99px;
+    background: #d1d9e6;
+  }
+  /* Bouton pour replier/déplier la zone contexte + champ au-dessus du pavé */
+  .np-compact-toggle {
+    position: absolute; right: .6rem; top: .3rem;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: #ffeae8; border: none; cursor: pointer;
+    color: var(--muted); font-size: .9rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s, background .15s;
+  }
+  .np-compact-toggle:active { background: var(--primary-glow); }
+  #numpadSheet.compact .np-compact-toggle { transform: rotate(180deg); }
+  /* Mode compact : masque nom/prénom + libellé de champ pour libérer de l'espace ;
+     la cellule concernée est mise en évidence directement dans le tableau. */
+  #numpadSheet.compact .np-ctx,
+  #numpadSheet.compact .np-field-row { display: none; }
+
+  /* Barre contexte élève */
+  .np-ctx {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .3rem .9rem .1rem;
+    border-bottom: 1px solid #f1f5f9;
+    gap: .4rem;
+  }
+  .np-ctx-nav {
+    background: none; border: none; cursor: pointer;
+    color: var(--primary); font-size: 1.2rem; padding: .1rem .4rem;
+    border-radius: 8px; transition: background .15s;
+  }
+  .np-ctx-nav:hover { background: var(--primary-glow); }
+  .np-ctx-nav:disabled { opacity: .25; cursor: default; }
+  .np-ctx-info { flex: 1; text-align: center; }
+  .np-ctx-name { font-size: .82rem; font-weight: 600; color: #1a2332; }
+  .np-ctx-pos  { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+
+  /* Champ actif affiché */
+  .np-field-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .45rem 1rem .35rem;
+    gap: .6rem;
+  }
+  .np-field-label {
+    font-size: .78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em;
+    cursor: pointer; padding: .2rem .5rem;
+    border-radius: 6px; transition: background .15s;
+  }
+  .np-field-label:hover { background: #f0f4f8; }
+  .np-field-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem; font-weight: 600;
+    color: #1a2332; min-width: 3.5ch; text-align: right;
+    letter-spacing: .02em;
+    transition: color .15s;
+  }
+  .np-field-value.invalid { color: var(--danger); }
+  .np-field-value.zero    { color: var(--primary); }
+  .np-field-value.ok      { color: var(--accent-dim); }
+
+  /* Grille touches */
+  .np-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: .3rem .7rem .3rem;
+  }
+  .np-key {
+    background: #f4f7fb;
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.3rem; font-weight: 500; color: #1a2332;
+    padding: .5rem 0;
+    cursor: pointer;
+    transition: background .12s, transform .08s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .np-key:active, .np-key.pressed { background: #dde6f5; transform: scale(.94); }
+  .np-key.np-key-del  { background: #fef2f2; color: var(--danger); font-size: 1.1rem; }
+  .np-key.np-key-del:active { background: #fee2e2; }
+  .np-key.np-key-comma { font-size: 1.4rem; font-weight: 700; }
+  .np-key:disabled { opacity: .3; cursor: default; }
+
+  /* Navigation bas */
+  .np-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .4rem .7rem .55rem;
+    gap: .5rem;
+  }
+  .np-nav-btn {
+    flex: 1; padding: .6rem 0;
+    border: 1px solid #e2e8f0; border-radius: 10px;
+    background: #f4f7fb; color: #4a5568;
+    font-family: inherit; font-size: .88rem; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .np-nav-btn:active { background: #dde6f5; }
+  .np-nav-btn:disabled { opacity: .28; cursor: default; }
+
+  /* ── VIEW SWITCHER PILL ──────────────────────────────── */
+  /* #toggleView utilise désormais le style .hbtn standard (icône unique, pas de glissière) */
+
+  /* ── CONFIRM MODAL ───────────────────────────────────── */
+  #confirmModal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9998; animation: fade-conf .15s ease-out; pointer-events: all; }
+  #confirmModal[hidden] { display: none; }
+  .confirm-box { background: #fff; border-radius: var(--radius); padding: 1.2rem; width: min(90%, 320px); box-shadow: var(--shadow-lg); animation: scale-conf .15s ease-out; }
+  .confirm-box h3 { font-size: .95rem; font-weight: 600; margin-bottom: .4rem; }
+  .confirm-box p  { font-size: .85rem; color: var(--muted); }
+  .actions-conf { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .9rem; }
+  .actions-conf button { padding: .35rem .9rem; border-radius: var(--radius-sm); border: 1px solid var(--border); font-family: inherit; font-size: .82rem; font-weight: 500; cursor: pointer; transition: background .15s; }
+  #btnCancel { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+  #btnOk     { background: var(--primary); color: #fff; border-color: transparent; }
+  #btnCancel:hover { background: #fecaca; }
+  #btnOk:hover     { background: #1d6fe8; }
+
+  @keyframes fade-conf  { from{opacity:0} to{opacity:1} }
+  @keyframes scale-conf { from{transform:scale(.94)} to{transform:scale(1)} }
+
+  /* ── GENERIC MODAL ───────────────────────────────────── */
+  .modalg { display: none; position: fixed; z-index: 10000; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+  .modalg.show { display: flex; align-items: center; justify-content: center; }
+  .modal-content {
+    background: #fff; border-radius: var(--radius); padding: 1.4rem;
+    width: min(90%, 480px); box-shadow: var(--shadow-lg);
+    animation: scale-conf .18s ease-out;
+  }
+  .modal-content h3 { font-size: 1rem; font-weight: 600; margin-bottom: .7rem; }
+  .modal-content p  { font-size: .85rem; color: #4a5568; line-height: 1.6; }
+  .closeg { float: right; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; }
+  .closeg:hover { color: #1a2332; }
+
+  /* ── GUIDE MULTI-ÉTAPES ──────────────────────────────── */
+  #guideOverlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 11000;
+    pointer-events: none;
+  }
+  #guideOverlay.active { display: block; }
+
+  /* Bloque les clics derrière le guide — l'assombrissement est géré uniquement
+     par #guideSpot (ombre 9999px), pour que la cible ne soit JAMAIS recouverte
+     par un flou/voile : elle doit toujours rester parfaitement nette. */
+  #guideMask {
+    position: absolute; inset: 0;
+    background: transparent;
+    transition: opacity .3s;
+    pointer-events: all;
+  }
+
+  #guideMask.guide-dim { background: rgba(10, 18, 35, 0.72); }
+  #guideSpot {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow:
+      0 0 0 4px rgba(45,124,246,0.9),
+      0 0 0 9999px rgba(10,18,35,0.72);
+    transition: all .38s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+    z-index: 11002;
+  }
+  #guideSpot.guide-no-target { display: none; }
+
+  /* Bulle du guide (tooltip) */
+  #guideBubble {
+    position: absolute;
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.3rem 1.5rem 1rem;
+    width: min(88vw, 360px);
+    max-height: min(70vh, 420px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.28), 0 0 0 1px rgba(45,124,246,0.18);
+    z-index: 11003;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    pointer-events: all;
+    transition: all .38s cubic-bezier(0.4,0,0.2,1);
+    animation: guide-pop .25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes guide-pop {
+    from { opacity: 0; transform: scale(.88) translateY(8px); }
+    to   { opacity: 1; transform: scale(1)   translateY(0); }
+  }
+
+  /* Petite flèche pointant vers l'élément */
+  #guideBubble::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #fff;
+    transform: rotate(45deg);
+    box-shadow: -2px -2px 4px rgba(0,0,0,0.06);
+    transition: all .38s cubic-bezier(0.4,0,0.2,1);
+  }
+  #guideBubble.arrow-top::before    { top: -7px; left: 30px; }
+  #guideBubble.arrow-bottom::before { bottom: -7px; left: 30px; }
+  #guideBubble.arrow-none::before   { display: none; }
+
+  .guide-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: .6rem; gap: .5rem;
+  }
+  .guide-step-badge {
+    font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--primary);
+    background: var(--primary-glow); border-radius: 99px;
+    padding: .15rem .6rem; white-space: nowrap; flex-shrink: 0;
+  }
+  .guide-close-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 1.2rem; color: var(--muted); line-height: 1;
+    padding: 0; margin-left: auto; transition: color .15s;
+  }
+  .guide-close-btn:hover { color: #1a2332; }
+
+  .guide-title {
+    display: flex; align-items: center; gap: .45rem;
+    font-size: .98rem; font-weight: 700; color: #1a2332;
+    margin-bottom: .4rem; line-height: 1.3;
+  }
+  .guide-ico {
+    display: inline-flex; flex-shrink: 0;
+    width: 20px; height: 20px;
+    color: var(--primary);
+  }
+  .guide-ico svg { width: 100%; height: 100%; display: block; }
+  .guide-desc {
+    font-size: .84rem; color: #4a5568; line-height: 1.65;
+  }
+  .guide-desc strong { color: #1a2332; }
+
+  /* Barre de progression */
+  .guide-progress-bar {
+    height: 3px; background: #e8eef5; border-radius: 99px;
+    margin: .9rem 0 .8rem; overflow: hidden;
+  }
+  .guide-progress-fill {
+    height: 100%; background: var(--primary); border-radius: 99px;
+    transition: width .35s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Boutons navigation */
+  .guide-nav {
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  }
+  .guide-btn {
+    padding: .42rem 1.1rem; border-radius: 8px; border: 1px solid transparent;
+    font-family: inherit; font-size: .82rem; font-weight: 600;
+    cursor: pointer; transition: background .15s, border-color .15s, opacity .15s;
+  }
+  .guide-btn-prev {
+    background: #f1f5f9; color: #4a5568; border-color: #e2e8f0;
+  }
+  .guide-btn-prev:hover { background: #e2e8f0; }
+  .guide-btn-prev:disabled { opacity: .35; cursor: default; }
+  .guide-btn-next {
+    background: var(--primary); color: #fff;
+  }
+  .guide-btn-next:hover { background: #1d6fe8; }
+  .guide-step-dots {
+    display: flex; gap: 5px; align-items: center;
+  }
+  .guide-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #e2e8f0; transition: background .2s, transform .2s;
+  }
+  .guide-dot.active { background: var(--primary); transform: scale(1.3); }
+
+  /* ── SERVER INDICATOR ────────────────────────────────── */
+  .serve-btn { display: inline-flex; align-items: center; gap: .4rem; }
+  .serve-indic { width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; flex-shrink: 0; transition: background .3s, box-shadow .3s; }
+  .serve-indic.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ── LOGIN CARD ──────────────────────────────────────── */
+  .cardlogin { display: flex; flex-direction: column; gap: .6rem; margin-top: .5rem; }
+  .cardlogin input {
+    padding: .6rem .8rem; border-radius: var(--radius-sm);
+    border: 1px solid #e2e8f0; font-family: inherit; font-size: .88rem;
+    outline: none; transition: border-color .18s, box-shadow .18s;
+  }
+  .cardlogin input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+  .cardlogin button {
+    padding: .65rem; border-radius: var(--radius-sm); border: none;
+    background: var(--accent); color: #fff; font-family: inherit;
+    font-weight: 600; font-size: .88rem; cursor: pointer; transition: background .18s;
+  }
+  .cardlogin button:hover  { background: var(--accent-dim); }
+  .cardlogin button:active { background: #007a4a; }
+
+  .btn-text,
+  .btn-spin {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    transition: opacity .22s ease, transform .22s ease;
+  }
+  .btn-spin {
+    position: absolute;
+    inset: 0;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+/* État chargement */
+.btn.loading { pointer-events: none; opacity: .85; }
+.btn.loading .btn-text { opacity: 0; transform: translateY(-8px); }
+.btn.loading .btn-spin { opacity: 1; transform: translateY(0); }
+
+  /* ── PERM OVERLAY ────────────────────────────────────── */
+  #permiOverlay button {
+    padding: .7rem 1.4rem; border-radius: var(--radius); border: none;
+    background: var(--primary); color: #fff; font-family: inherit;
+    font-size: .9rem; font-weight: 600; cursor: pointer;
+    box-shadow: var(--shadow-md); transition: background .18s;
+  }
+  #permiOverlay button:hover { background: #1d6fe8; }
+
+  /* ── PERIOD BADGE ────────────────────────────────────── */
+  #txtPeriode {
+    background: rgba(255,255,255,0.1); border-radius: 4px;
+    padding: 2px 7px; font-size: .75rem; font-weight: 500;
+  }
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media(max-width:768px) {
+    footer, .table-wrap { display: none; }
+    .cards-wrap { display: flex; }
+    .hbtn { padding: .5rem; gap: 0; }
+    .hbtn .txt { display: none; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: .35rem;
+    }
+    .toolbar label {
+      display: inline-grid;
+      min-width: 0; /* autorise la cellule à rétrécir sous la taille du contenu */
+    }
+    .toolbar select {
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #msgstate { grid-column: 1/-1; border-top: 1px solid rgba(0,0,0,0.06); padding-top: .4rem; }
+    .toggleheader { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<header id="HeadWrap">
+  <h2 id="openGuide">✦ SAISIE DE NOTES</h2>
+
+  <div class="header-spacer"></div>
+
+  <button id="openBtn" class="hbtn" title="Charger un fichier" aria-label="Charger un fichier">
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12a1.5 1.5 0 0 0 1.06.44H19.5A1.5 1.5 0 0 1 21 9.5"/><path d="M3 7.5v9A1.5 1.5 0 0 0 4.5 18h13.44a1.5 1.5 0 0 0 1.45-1.11l1.88-6.9a1.2 1.2 0 0 0-1.16-1.5H6a1.5 1.5 0 0 0-1.45 1.11L3 15"/></svg></span>
+    <span class="txt">Charger</span>
+  </button>
+  <button id="saveBtn" class="hbtn" title="Enregistrer" aria-label="Enregistrer">
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.75H17a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7.5L8 3.75Z"/><path d="M9 3.75V8h6"/><circle cx="12" cy="14.25" r="2.25"/></svg></span>
+    <span class="txt">Enregistrer</span>
+  </button>
+  <button id="exportBtn" class="hbtn" title="Exporter" aria-label="Exporter">
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16C5 9.5 9 5.5 15 5.5"/><path d="M12 3l3 2.5-3 2.5"/></svg></span>
+    <span class="txt">Exporter</span>
+  </button>
+  <div class="infosource">
+    <button id="netToggle" class="hbtn serve-btn" title="Connexion serveur" aria-label="Connexion serveur">
+      <span id="netIndicator" class="serve-indic"></span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="6" rx="1.5"/><rect x="3.5" y="13.5" width="17" height="6" rx="1.5"/><circle cx="7" cy="7.5" r=".75" fill="currentColor" stroke="none"/><circle cx="7" cy="16.5" r=".75" fill="currentColor" stroke="none"/></svg></span>
+      <span class="txt">Connexion</span>
+    </button>
+    <button id="toggleView" class="hbtn" type="button" aria-label="Passer en vue cartes" title="Passer en vue cartes">
+      <span class="ico"></span>
+      <span class="txt">Cartes</span>
+    </button>
+    <button id="expDownload" class="hbtn" title="Télécharger dans Downloads" aria-label="Télécharger dans Downloads">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></span>
+      <span class="txt">Télécharger</span>
+    </button>
+    <span id="txtPeriode"></span>
+  </div>
+</header>
+
+<!-- Toggle pill – anchored under header, slides with it -->
+<button id="toggleHeaderBtn" class="toggleheader" aria-label="Masquer l'entête" title="Masquer l'entête">
+  <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
+</button>
+
+<main id="MainWrap">
+  <div class="toolbar">
+    <label>Classe <select id="fClasseSel"></select></label>
+    <label>Matière <select id="fMatiereSel"></select></label>
+    <label>Ndevoir
+      <select id="nbNotesSel">
+        <option selected>1</option><option>2</option><option>3</option>
+      </select>
+    </label>
+    <span id="effectif" class="status"></span>
+    <span id="msgstate">Charger le fichier</span>
+  </div>
+
+  <div class="table-wrap" id="tableWrap">
+    <table>
+      <thead id="theadtab"></thead>
+      <tbody id="tbodytab"></tbody>
+    </table>
+  </div>
+
+  <div class="cards-wrap" id="cardstab"></div>
+</main>
+
+<footer><span id="txtSource" class="status"></span></footer>
+<input type="file" id="fileInput" accept=".json" style="display:none">
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ── PAVÉ NUMÉRIQUE MOBILE ─────────────────────────────── -->
+<div id="numpadBackdrop"></div>
+<div id="numpadSheet" role="dialog" aria-label="Saisie de note">
+  <div class="np-handle-wrap">
+    <div class="np-handle"></div>
+    <button class="np-compact-toggle" id="npCompactToggle" title="Afficher/masquer les infos">⌃</button>
+  </div>
+  <div class="np-ctx">
+    <button class="np-ctx-nav" id="npPrevEleve" title="Élève précédent">‹</button>
+    <div class="np-ctx-info">
+      <div class="np-ctx-name" id="npEleveName">—</div>
+      <div class="np-ctx-pos"  id="npElevePos">0 / 0</div>
+    </div>
+    <button class="np-ctx-nav" id="npNextEleve" title="Élève suivant">›</button>
+  </div>
+  <div class="np-field-row">
+    <span class="np-field-label" id="npFieldLabel" title="Changer de champ">Devoir 1</span>
+    <span class="np-field-value" id="npFieldValue">—</span>
+  </div>
+  <div class="np-grid" id="npGrid">
+    <button class="np-key" data-v="7">7</button>
+    <button class="np-key" data-v="8">8</button>
+    <button class="np-key" data-v="9">9</button>
+    <button class="np-key" data-v="4">4</button>
+    <button class="np-key" data-v="5">5</button>
+    <button class="np-key" data-v="6">6</button>
+    <button class="np-key" data-v="1">1</button>
+    <button class="np-key" data-v="2">2</button>
+    <button class="np-key" data-v="3">3</button>
+    <button class="np-key np-key-comma" data-v="," id="npCommaKey">,</button>
+    <button class="np-key" data-v="0">0</button>
+    <button class="np-key np-key-del" id="npDelKey" data-v="DEL">⌫</button>
+  </div>
+  <div class="np-nav">
+    <button class="np-nav-btn" id="npPrevField">← Préc</button>
+    <button class="np-nav-btn" id="npNextField">Suiv →</button>
+  </div>
+</div>
+
+<div id="confirmModal" hidden>
+  <div class="confirm-box" role="dialog" aria-modal="true">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmMessage"></p>
+    <div class="actions-conf">
+      <button id="btnCancel">Annuler</button>
+      <button id="btnOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="OverlayWrap" hidden>
+  <div class="overlay-box">
+    <span class="overlayText"></span>
+    <div class="bar-progress"></div>
+  </div>
+</div>
+<div id="permiOverlay" hidden>
+  <button id="btnGrant">Autoriser l'accès au fichier</button>
+</div>
+
+<!-- ── GUIDE MULTI-ÉTAPES ─────────────────────────────────── -->
+<div id="guideOverlay">
+  <div id="guideMask"></div>
+  <div id="guideSpot"></div>
+  <div id="guideBubble" class="arrow-none">
+    <div class="guide-header">
+      <span class="guide-step-badge" id="guideStepLabel">Étape 1 / 7</span>
+      <button class="guide-close-btn" id="guideCloseBtn" title="Fermer le guide">✕</button>
+    </div>
+    <div class="guide-title" id="guideTitle"></div>
+    <div class="guide-desc"  id="guideDesc"></div>
+    <div class="guide-progress-bar">
+      <div class="guide-progress-fill" id="guideProgressFill"></div>
+    </div>
+    <div class="guide-nav">
+      <button class="guide-btn guide-btn-prev" id="guidePrev">← Précédent</button>
+      <div class="guide-step-dots" id="guideDots"></div>
+      <button class="guide-btn guide-btn-next" id="guideNext">Suivant →</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginPage" class="modalg">
+  <div class="modal-content">
+    <span class="closeg">&times;</span>
+    <h3>Connexion au serveur</h3>
+    <div class="cardlogin">
+      <input id="userLogin" type="text" placeholder="Nom d'utilisateur">
+      <input id="passLogin" type="password" placeholder="Mot de passe">
+      <button id="loginBtn">
+        <span class="btn-text">🔑 Se connecter</span>
+
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Capacitor : Filesystem + Haptics natifs (généré via esbuild, voir capacitor-entry.js) -->
+<script src="capacitor-bundle.js"></script>
+<!-- dexie -->
+<script src="dexie.min.js"></script>
+<!-- papaparse -->
+<script src="papaparse.min.js"></script>
+<!-- js custom -->
+<script>
+  /* ── toggleHeader – pill anchored to bottom of header ── */
+  const headWrap        = document.getElementById('HeadWrap');
+  const mainWrap        = document.getElementById('MainWrap');
+  const toggleHeaderBtn = document.getElementById('toggleHeaderBtn');
+
+  function getHeaderH() { return headWrap.getBoundingClientRect().height; }
+
+  // position the pill right at the bottom edge of the header
+  function positionPill(hidden) {
+    const h = getHeaderH();
+    toggleHeaderBtn.classList.toggle('is-hidden', hidden);
+    if (hidden) {
+      // header is off-screen → pill sits at top:0
+      toggleHeaderBtn.style.top = '0px';
+      toggleHeaderBtn.setAttribute('aria-label', "Afficher l'entête");
+      toggleHeaderBtn.setAttribute('title',      "Afficher l'entête");
+    } else {
+      // header visible → pill hangs just below it
+      toggleHeaderBtn.style.top = h + 'px';
+      toggleHeaderBtn.setAttribute('aria-label', "Masquer l'entête");
+      toggleHeaderBtn.setAttribute('title',      "Masquer l'entête");
+    }
+  }
+
+  function toggleHeader() {
+    const isHidden = headWrap.classList.toggle('header-hidden');
+    if (isHidden) {
+      mainWrap.style.marginTop = `-${getHeaderH()}px`;
+    } else {
+      mainWrap.style.marginTop = '0';
+    }
+    // wait for CSS transition then reposition
+    setTimeout(() => positionPill(isHidden), 350);
+    positionPill(isHidden); // instant update for the pill itself
+  }
+
+  // Init pill position
+  positionPill(false);
+
+  toggleHeaderBtn.addEventListener('click', toggleHeader);
+</script>
+<script>
+  'use strict';
+
+/* ============================================================
+   ✅ #26 — CAPTEUR D'ERREURS GLOBAL (diagnostic)
+   Affiche toute erreur JS non gérée à l'écran au lieu de la laisser
+   silencieuse. showToast est une function declaration plus bas dans
+   ce même script, donc hoistée : utilisable ici sans souci d'ordre.
+   ============================================================ */
+window.addEventListener('error', (e) => {
+  try {
+    const msg = `Erreur JS : ${e?.message || 'inconnue'} (${(e?.filename||'').split('/').pop()}:${e?.lineno||'?'})`;
+    console.error(msg, e?.error);
+    if (typeof showToast === 'function') showToast(msg, 'error', 10000);
+    else alert(msg);
+  } catch (_) {}
+});
+window.addEventListener('unhandledrejection', (e) => {
+  try {
+    const msg = `Erreur async : ${e?.reason?.message || e?.reason || 'inconnue'}`;
+    console.error(msg, e?.reason);
+    if (typeof showToast === 'function') showToast(msg, 'error', 10000);
+    else alert(msg);
+  } catch (_) {}
+});
+
+/* ============================================================
+   CONFIG — toutes les constantes de paramétrage centralisées
+   ============================================================ */
+const CONFIG = Object.freeze({
+  csvDelimiter  : ';',
+  noteFields    : ['devoir11', 'devoir22', 'devoir33'],       // ✅ #12 renommés
+  compoField    : 'componote',
+  idField       : 'ideleve',
+  nomField      : 'nomel',
+  prenomField   : 'prenomel',
+  genreField    : 'genre',
+  optionField   : 'bloption',
+  requiredKeys  : [
+    'ideleve','nomel','prenomel','genre','fkclasse',
+    'idmatiere','devoir11','devoir22','devoir33','componote','bloption'
+  ],
+  headerLabels  : {
+    ideleve   : 'ID',
+    nomel     : 'Nom',
+    prenomel  : 'Prénom',
+    genre     : 'Genre',
+    fkclasse  : 'Classe',
+    idmatiere : 'Matière',
+    bloption  : 'Exempté',
+    devoir11  : 'Devoir 1',
+    devoir22  : 'Devoir 2',
+    devoir33  : 'Devoir 3',
+    componote : 'Composition',
+  },
+  exportFields  : [                                        // ✅ #17 sorti de ExportManager
+    'ideleve','idmatiere','fksequ',
+    'devoir11','devoir22','devoir33',
+    'componote','nbrenote','bloption',
+  ],
+  draftDelay    : 800,
+  idbMaxRetries : 3,
+});
+
+/* ============================================================
+   LOGGER — gestion d'erreurs centralisée                    ✅ #16
+   ============================================================ */
+const logger = {
+  warn : (...args) => console.warn('[App]',  ...args),
+  error: (...args) => console.error('[App]', ...args),
+  info : (...args) => console.info('[App]',  ...args),
+};
+
+/* ============================================================
+   STATE — état applicatif encapsulé                         ✅ #18
+   ============================================================ */
+const state = (() => {
+  let _data = {
+    rowNotes        : [],
+    rowMatieres     : [],
+    filtered        : [],
+    headers         : [],
+    unsaved         : false,
+    isOptionMat     : false,
+    idbError        : false,
+    currentSourceId : null,
+    currentView     : window.matchMedia('(max-width:768px)').matches ? 'card' : 'table',
+    nbNotes         : 1,
+    user_id         : null,
+  };
+
+  const _onChange = new Map();                             // callbacks par champ
+
+  return {
+    get: key        => _data[key],
+    set: (key, val) => { _data[key] = val; _onChange.get(key)?.(_data[key]); },
+    onchange: (key, fn) => _onChange.set(key, fn),
+    snapshot: ()    => ({ ..._data }),
+  };
+})();
+
+/* ============================================================
+   DOM — références centralisées, plus d'appels directs à $() ✅ #11
+   ============================================================ */
+const byId = id => document.getElementById(id);
+
+const dom = {
+  openBtn         : byId('openBtn'),
+  saveBtn         : byId('saveBtn'),
+  toggleBtn       : byId('toggleView'),
+  exportBtn       : byId('exportBtn'),
+  fClasseSel      : byId('fClasseSel'),
+  fMatiereSel     : byId('fMatiereSel'),
+  nbNotesSel      : byId('nbNotesSel'),
+  theadtab        : byId('theadtab'),
+  tbodytab        : byId('tbodytab'),
+  cardstab        : byId('cardstab'),
+  effectif        : byId('effectif'),
+  msgState        : byId('msgstate'),
+  overlayWrap     : byId('OverlayWrap'),
+  toastWrap       : byId('toastWrap'),
+  fileInput       : byId('fileInput'),
+  toggleHeaderBtn : byId('toggleHeaderBtn'),
+  txtPeriode      : byId('txtPeriode'),
+  txtSource       : byId('txtSource'),
+  confirmModal    : byId('confirmModal'),
+  confirmTitle    : byId('confirmTitle'),
+  confirmMessage  : byId('confirmMessage'),
+  btnOk           : byId('btnOk'),
+  btnCancel       : byId('btnCancel'),
+  permiOverlay    : byId('permiOverlay'),
+  btnGrant        : byId('btnGrant'),
+  openGuide       : byId('openGuide'),
+  expDownload     : byId('expDownload'),
+  headWrap        : byId('HeadWrap'),
+  mainWrap        : byId('MainWrap'),
+  tableWrap       : byId('tableWrap'),
+};
+
+/* ============================================================
+   DÉTECTION DE MODE D'INTERACTION — robuste et réactive     ✅ #22
+   Combine taille d'écran + disponibilité d'un pointeur précis
+   (any-pointer, pas pointer seul) pour éviter les faux positifs
+   sur PC tactile grand écran ou tablette + souris Bluetooth.
+   ============================================================ */
+const InteractionMode = (() => {
+  const mqSmallScreen = window.matchMedia('(max-width: 768px)');
+  const mqFinePointer = window.matchMedia('(any-pointer: fine)'); // souris/trackpad dispo, même en plus du tactile
+
+  function computeIsMobile() {
+    if (!mqSmallScreen.matches) return false; // grand écran → jamais le pavé, même tactile
+    if (mqFinePointer.matches)  return false; // souris dispo → clavier physique prioritaire
+    return true;                              // petit écran + pas de souris → tactile
+  }
+
+  let isMobile = computeIsMobile();
+  const listeners = [];
+
+  function notify() {
+    const next = computeIsMobile();
+    if (next !== isMobile) {
+      isMobile = next;
+      listeners.forEach(fn => fn(isMobile));
+    }
+  }
+
+  [mqSmallScreen, mqFinePointer].forEach(mq => {
+    mq.addEventListener ? mq.addEventListener('change', notify) : mq.addListener(notify);
+  });
+  window.addEventListener('resize', notify);
+
+  return {
+    get isMobile() { return isMobile; },
+    onChange(fn)   { listeners.push(fn); },
+  };
+})();
+
+// Compat rétro : ancien nom utilisé ailleurs dans le fichier (branche desktop = pas mobile)
+const isDesktop = !InteractionMode.isMobile;
+
+/* ============================================================
+   CLASSE HandleStore — stockage FileSystemFileHandle        ✅ #10
+   ============================================================ */
+class HandleStore {
+  #dexie;
+
+  constructor() {
+    this.#dexie = new Dexie('pathAdminSchoolMpr');
+    // v1 utilisait une clé inline 'key' incompatible avec put(handle, key) (clé explicite) :
+    // IndexedDB rejette cet appel (DataError), donc rien n'était jamais réellement stocké.
+    // v2 passe en clé hors-ligne ('') pour que la clé explicite fonctionne.
+    this.#dexie.version(1).stores({ mprhandles: 'key' });
+    this.#dexie.version(2).stores({ mprhandles: '' });
+  }
+
+  async store(key, handle) {
+    try   { await this.#dexie.table('mprhandles').put(handle, key); return true; }
+    catch (e) {
+      logger.warn('HandleStore.store fail', e);
+      try { showToast(`❌ Échec mémorisation du chemin : ${e?.message || e}`, 'error', 8000); } catch (_) {}
+      return false;
+    }
+  }
+
+  async load(key) {
+    try   { return await this.#dexie.table('mprhandles').get(key) ?? null; }
+    catch (e) { logger.warn('HandleStore.load fail', e); return null; }
+  }
+}
+
+/* ============================================================
+   CLASSE DraftStore — stockage brouillons                   ✅ #10
+   ============================================================ */
+class DraftStore {
+  #dexie;
+
+  constructor() {
+    this.#dexie = new Dexie('draftAdminSchoolMpr');
+    this.#dexie.version(1).stores({ mprdrafts: 'id' });
+  }
+
+  async save(draft) {
+    // Lance l'exception vers l'appelant — le retry est géré par DraftManager
+    await this.#dexie.table('mprdrafts').put(draft);
+  }
+
+  async load(id) {
+    try   { return await this.#dexie.table('mprdrafts').get(id) ?? null; }
+    catch (e) { logger.warn('DraftStore.load fail', e); return null; }
+  }
+
+  async delete(id) {
+    try   { await this.#dexie.table('mprdrafts').delete(id); return true; }
+    catch (e) { logger.warn('DraftStore.delete fail', e); return false; }
+  }
+}
+
+/* ============================================================
+   CLASSE DraftManager — sauvegarde automatique              ✅ #2 #16
+   ============================================================ */
+class DraftManager {
+  #timer      = null;
+  #store;
+  #retryCount = 0;
+
+  constructor(draftStore) {
+    this.#store = draftStore;
+  }
+
+  /* ── clé de brouillon ─────────────────────────────────── */
+  #key() {
+    const id = state.get('currentSourceId');
+    return id ? `draft_S${id}` : null;
+  }
+
+  /* ── construction du payload ──────────────────────────── */
+  /* Ne sauvegarde que les champs de notes + identifiant — pas les données fixes */
+  #buildPayload(sourceId, rowNotes) {
+    const noteKeys = [CONFIG.idField, ...CONFIG.noteFields, CONFIG.compoField, CONFIG.optionField, 'nbrenote'];
+    const delta = rowNotes.map(r =>
+      noteKeys.reduce((acc, k) => { if (k in r) acc[k] = r[k]; return acc; }, {})
+    );
+    return {
+      id      : `draft_S${sourceId}`,
+      savedAt : new Date().toISOString(),
+      rowNotes: delta,
+    };
+  }
+
+  /* ── flush immédiat vers IDB (sans debounce) ──────────── */
+  async #flush() {
+    const key = this.#key();
+    if (!key) return;
+
+    const payload = this.#buildPayload(
+      state.get('currentSourceId'),
+      state.get('rowNotes'),
+    );
+
+    const maxRetries = CONFIG.idbMaxRetries ?? 3;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        await this.#store.save(payload);
+        // Succès : on réinitialise le compteur et on efface le flag d'erreur
+        this.#retryCount = 0;
+        if (state.get('idbError')) {
+          state.set('idbError', false);
+          showToast('Sauvegarde automatique rétablie', 'success');
+        }
+        return;
+      } catch (e) {
+        if (attempt < maxRetries) {
+          const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+          logger.warn(`DraftManager flush — tentative ${attempt + 1}/${maxRetries}, retry dans ${delay}ms`, e);
+          await new Promise(res => setTimeout(res, delay));
+        } else {
+          // Toutes les tentatives épuisées
+          this.#retryCount++;
+          logger.error('DraftManager flush — échec définitif après retries', e);
+          if (!state.get('idbError')) {
+            state.set('idbError', true);
+            showToast('Sauvegarde automatique indisponible — exportez vos données avant de fermer.',
+              'error',4000
+            );
+          }
+        }
+      }
+    }
+  }
+
+  /* ── planifie un flush debounced ──────────────────────── */
+  schedule() {
+    const key = this.#key();
+    if (!key) return;
+    if (this.#timer) clearTimeout(this.#timer);
+    this.#timer = setTimeout(async () => {
+      this.#timer = null;
+      await this.#flush();
+    }, CONFIG.draftDelay);
+  }
+
+  /* ── annule le timer en attente ───────────────────────── */
+  cancel() {
+    if (this.#timer) { clearTimeout(this.#timer); this.#timer = null; }
+  }
+
+  /* ── flush immédiat + annulation du timer ─────────────── */
+  // À appeler avant fermeture de fichier ou export critique
+  async flushNow() {
+    this.cancel();
+    await this.#flush();
+  }
+
+  /* ── restauration au chargement ───────────────────────── */
+  async tryRestore(onRestored) {
+    const key = this.#key();
+    if (!key) return null;
+    try {
+      const draft = await this.#store.load(key);
+      if (!draft || !Array.isArray(draft.rowNotes)) return null;
+
+      // Fusionner le delta sauvegardé dans le rowNotes complet déjà chargé
+      const fullRows = state.get('rowNotes');
+      const deltaMap = new Map(draft.rowNotes.map(d => [String(d[CONFIG.idField]), d]));
+      const noteKeys = [...CONFIG.noteFields, CONFIG.compoField, CONFIG.optionField, 'nbrenote'];
+      const merged = fullRows.map(r => {
+        const d = deltaMap.get(String(r[CONFIG.idField]));
+        if (!d) return r;
+        const patched = { ...r };
+        noteKeys.forEach(k => { if (k in d) patched[k] = d[k]; });
+        return patched;
+      });
+
+      state.set('rowNotes', merged);
+      state.set('unsaved',  true);
+
+      if (typeof onRestored === 'function') onRestored(draft);
+      return draft;
+    } catch (e) {
+      logger.warn('DraftManager.tryRestore failed', e);
+      return null;
+    }
+  }
+
+  /* ── suppression du brouillon courant ─────────────────── */
+  async deleteCurrent() {
+    this.cancel();
+    const key = this.#key();
+    if (key) await this.#store.delete(key);
+  }
+}
+
+/* ============================================================
+   CLASSE FileManager — ouverture + sauvegarde JSON
+   ============================================================ */
+class FileManager {
+  #handle = null; // { path, directory } en mode natif Capacitor
+
+  canWrite() {
+    return !!this.#handle;
+  }
+
+  setHandle(h)   { this.#handle = h; }
+  clearHandle()  { this.#handle = null; }
+
+  #buildJSONName(meta) {
+    const d       = new Date();
+    const pad     = n => String(n).padStart(2, '0');
+    const profnom = meta?.forprof ?? 'notes';
+    return `Notes_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.json`;
+  }
+
+  // ── Ouverture via le sélecteur de fichiers natif Android/iOS ──
+  async open() {
+    try {
+      const result = await CapPlugins.FilePicker.pickFiles({
+        types    : ['application/json'],
+        readData : true,       // renvoie le contenu en base64 directement
+        multiple : false,
+      });
+      const picked = result?.files?.[0];
+      if (!picked) return;
+
+      const text = atob(picked.data); // base64 → texte (JSON ASCII/UTF-8 simple)
+      const fileShim = {
+        name : picked.name,
+        text : async () => text,
+      };
+
+      // Le fichier choisi devient la destination d'enregistrement suivante,
+      // dans le dossier applicatif dédié (SaisieNotes/)
+      this.#handle = { path: `SaisieNotes/${picked.name}`, directory: CapPlugins.Directory.External };
+      await handleStore.store('lastJSON', this.#handle);
+
+      const loaded = await loadJSONDataset(fileShim, true);
+
+      // ✅ #25 — Garde immédiatement une copie sur disque dès l'ouverture (si le fichier
+      // est valide), pour que la restauration automatique au prochain lancement fonctionne
+      // même si l'utilisateur n'a pas encore appuyé sur "Enregistrer".
+      if (loaded) await this.#persistSnapshot();
+    } catch (e) {
+      if (e?.message?.includes('cancelled') || e?.code === 'cancelled') return;
+      logger.warn('FilePicker error', e);
+      showToast('Impossible d\'ouvrir le fichier', 'error');
+    }
+  }
+
+  // ── Écrit l'état courant sur disque, juste après l'ouverture ──
+  // Garantit qu'un fichier existe physiquement même sans clic sur "Enregistrer".
+  async #persistSnapshot() {
+    if (!this.#handle) {
+      showToast('⚠️ #persistSnapshot : aucun handle défini', 'warn', 6000);
+      return;
+    }
+    const rowNotesToSave = state.get('rowNotes');
+    if (!Array.isArray(rowNotesToSave) || !rowNotesToSave.length) {
+      logger.warn('#persistSnapshot annulé : rowNotes vide, écriture bloquée par sécurité');
+      showToast('⚠️ Copie automatique annulée : données vides détectées', 'warn', 6000);
+      return;
+    }
+    try {
+      const payload = {
+        notes_mpr    : state.get('rowNotes'),
+        matieres_mpr : state.get('rowMatieres'),
+        infos_mpr    : currentMeta,
+      };
+      await CapPlugins.Filesystem.writeFile({
+        path      : this.#handle.path,
+        directory : this.#handle.directory,
+        data      : JSON.stringify(payload, null, 2),
+        encoding  : CapPlugins.Encoding.UTF8,
+        recursive : true,
+      });
+      // ✅ #26 diagnostic — confirmation visible que la copie a bien été écrite
+      showToast(`💾 Copie mémorisée : ${this.#handle.path}`, 'success', 4000);
+    } catch (e) {
+      // ✅ #26 diagnostic — rendu visible : sinon la restauration auto échoue en silence
+      logger.warn('FileManager.#persistSnapshot failed', e);
+      showToast(`❌ Échec mémorisation fichier : ${e?.message || e}`, 'error', 8000);
+    }
+  }
+
+  async save() {
+    if (!state.get('unsaved')) {
+      showToast('Aucune modification à enregistrer', 'warn');
+      return { ok: false, reason: 'no_changes' };
+    }
+
+    // Garde-fou anti-perte de données : n'écrase jamais un fichier existant
+    // par un contenu vide, quelle qu'en soit la cause.
+    const rowNotesToSave = state.get('rowNotes');
+    if (!Array.isArray(rowNotesToSave) || !rowNotesToSave.length) {
+      showErrorToast({
+        title  : 'Sauvegarde bloquée par sécurité',
+        detail : 'Aucune donnée en mémoire — enregistrer écraserait le fichier existant avec un contenu vide.<br>Rechargez le fichier source avant de réessayer.',
+        actions: [{ label: '📂 Recharger un fichier', style: 'primary', onClick: () => dom.openBtn.click() }],
+      });
+      return { ok: false, reason: 'empty_data' };
+    }
+
+    showOverlay();
+    if (!validateAllNotes()) { hideOverlay(); return; }
+
+    if (!this.#handle) {
+      // Première sauvegarde : fichier créé automatiquement dans le dossier de l'app
+      this.#handle = {
+        path     : `SaisieNotes/${this.#buildJSONName(currentMeta)}`,
+        directory: CapPlugins.Directory.External,
+      };
+      await handleStore.store('lastJSON', this.#handle);
+    }
+
+    try {
+      const payload = {
+        notes_mpr    : state.get('rowNotes'),
+        matieres_mpr : state.get('rowMatieres'),
+        infos_mpr    : currentMeta,
+      };
+      await CapPlugins.Filesystem.writeFile({
+        path      : this.#handle.path,
+        directory : this.#handle.directory,
+        data      : JSON.stringify(payload, null, 2),
+        encoding  : CapPlugins.Encoding.UTF8,
+        recursive : true,
+      });
+      state.set('unsaved', false);
+      dom.msgState.textContent = '✅Enregistré';
+      await draftManager.deleteCurrent();
+
+      // Affiche l'emplacement exact + permet de partager immédiatement le fichier
+      const { uri } = await CapPlugins.Filesystem.getUri({
+        path: this.#handle.path, directory: this.#handle.directory,
+      });
+      showActionToast({
+        variant: 'success', icon: '✅',
+        title  : 'Enregistré',
+        detail : `Fichier : <code>${this.#handle.path}</code><br>Appuyez sur "Partager" pour l'envoyer vers Drive, mail, etc.`,
+        actions: [
+          { label: '📤 Partager', style: 'primary', onClick: () => CapPlugins.Share.share({ title: 'Fichier de notes', url: uri }).catch(() => {}) },
+        ],
+      });
+      return { ok: true };
+    } catch (e) {
+      logger.error('FileManager.save error', e);
+      showErrorToast({
+        title  : 'Échec de l\'enregistrement',
+        detail : 'L\'écriture du fichier a échoué. Réessayez ou choisissez un autre fichier.',
+        actions: [
+          { label: '🔁 Réessayer', style: 'primary', onClick: () => this.save() },
+          { label: '📂 Choisir un fichier', style: 'secondary', onClick: () => dom.openBtn.click() },
+        ],
+      });
+      return { ok: false, reason: 'write_failed' };
+    } finally {
+      hideOverlay();
+    }
+  }
+
+  // ── Restauration automatique du dernier fichier ouvert (mode natif) ──
+  async tryAutoRestore() {
+    try {
+      const h = await handleStore.load('lastJSON');
+      // ✅ #26 diagnostic — distingue "jamais rien enregistré" de "échec de restauration"
+      if (!h?.path) {
+        showToast('🔍 Aucun fichier précédent mémorisé', 'warn', 4000);
+        return;
+      }
+
+      const stat = await CapPlugins.Filesystem.stat({
+        path: h.path, directory: h.directory,
+      }).catch((err) => { logger.warn('stat failed', err); return null; });
+
+      if (!stat) {
+        // Le fichier n'existe plus à cet emplacement
+        showToast(`⚠️ Fichier précédent introuvable : ${h.path}`, 'warn', 6000);
+        return;
+      }
+
+      this.#handle = h;
+      const result = await CapPlugins.Filesystem.readFile({
+        path: h.path, directory: h.directory, encoding: CapPlugins.Encoding.UTF8,
+      });
+      const fileShim = { name: h.path.split('/').pop(), text: async () => result.data };
+      const loaded = await loadJSONDataset(fileShim, true);
+      if (loaded) showToast(`🔄 Restauré automatiquement : ${h.path}`, 'success', 4000);
+    } catch (e) {
+      logger.warn('FileManager.tryAutoRestore failed', e);
+      showToast(`❌ Échec restauration auto : ${e?.message || e}`, 'error', 8000);
+    }
+  }
+}
+
+/* ============================================================
+   CLASSE ExportManager — export CSV                         ✅ #3 #17
+   ============================================================ */
+class ExportManager {
+  // ✅ #3 — reçoit meta en paramètre, ne lit plus le DOM
+  #buildName(meta) {
+    const d      = new Date();
+    const pad    = n => String(n).padStart(2, '0');
+    const profnom = meta?.forprof ?? 'export';
+    return `Saisie_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.csv`;
+  }
+
+  #buildBlob() {
+    if (typeof Papa === 'undefined') {
+      showToast('Librairie papaparse introuvable — téléchargement impossible', 'error');
+      throw new Error('papaparse not loaded');
+    }
+    const fields = CONFIG.exportFields;
+    const data   = state.get('rowNotes').map(r => fields.map(f => r[f] ?? ''));
+    const csv    = Papa.unparse({ fields, data }, { delimiter: CONFIG.csvDelimiter, newline: '\n', quotes: true });
+    return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  }
+
+  #blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async export() {
+    const rowNotes = state.get('rowNotes');
+    if (!Array.isArray(rowNotes) || !rowNotes.length) {
+      showErrorToast({
+        title  : 'Aucune donnée à exporter',
+        detail : 'Chargez d\'abord un fichier de notes avant d\'exporter.',
+        actions: [{ label: '📂 Charger un fichier', style: 'primary', onClick: () => dom.openBtn.click() }],
+      });
+      return;
+    }
+    if (!validateAllNotes()) { return; }
+    showOverlay('Exportation en cours…');
+    if (state.get('user_id')) { await main.sync.exportdt(); hideOverlay(); return; }
+
+    try {
+      const blob       = this.#buildBlob();
+      const exportName = this.#buildName(currentMeta);
+      const csvText    = await blob.text();
+
+      // 1. Écriture native dans Documents/SaisieNotes/exports/
+      const exportPath = `SaisieNotes/exports/${exportName}`;
+      await CapPlugins.Filesystem.writeFile({
+        path      : exportPath,
+        directory : CapPlugins.Directory.External,
+        data      : csvText,
+        encoding  : CapPlugins.Encoding.UTF8,
+        recursive : true,
+      });
+      const { uri } = await CapPlugins.Filesystem.getUri({
+        path: exportPath, directory: CapPlugins.Directory.External,
+      });
+
+      showToast(`Export réussi — ${exportName}`, 'success', 4000);
+
+      // 2. Propose le partage natif (Drive, email, WhatsApp, etc.)
+      await CapPlugins.Share.share({
+        title: 'Export notes CSV',
+        text : exportName,
+        url  : uri,
+        dialogTitle: 'Partager le fichier CSV',
+      }).catch(() => {}); // annulation du partage = pas une erreur
+    } catch (err) {
+      logger.error('ExportManager.export error', err);
+      showErrorToast({
+        title  : 'Erreur inattendue lors de l\'export',
+        detail : err?.message ?? '',
+        actions: [
+          { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.export() },
+        ],
+      });
+    } finally {
+      hideOverlay();
+    }
+  }
+
+  // ✅ Copie propre du CSV dans le dossier public Downloads de l'appareil,
+  // via le plugin natif DownloadsSaver (MediaStore Android 10+, permission
+  // WRITE_EXTERNAL_STORAGE seulement sur Android 9 et moins). Pas de boîte
+  // de partage : fluide, silencieux, retrouvable dans Downloads.
+  async downloadToDownloads() {
+    const rowNotes = state.get('rowNotes');
+    if (!Array.isArray(rowNotes) || !rowNotes.length) {
+      showErrorToast({
+        title  : 'Aucune donnée à télécharger',
+        detail : 'Chargez d\'abord un fichier de notes avant de télécharger.',
+        actions: [{ label: '📂 Charger un fichier', style: 'primary', onClick: () => dom.openBtn.click() }],
+      });
+      return;
+    }
+    if (!validateAllNotes()) { return; }
+    if (!CapPlugins?.DownloadsSaver) {
+      showToast('Téléchargement indisponible sur cette plateforme', 'warn');
+      return;
+    }
+    showOverlay('Téléchargement en cours…');
+    try {
+      const blob     = this.#buildBlob();
+      const fileName = this.#buildName(currentMeta);
+      const data     = await this.#blobToBase64(blob);
+
+      await CapPlugins.DownloadsSaver.saveFile({ fileName, mimeType: 'text/csv', data });
+
+      showToast(`Téléchargé dans Downloads — ${fileName}`, 'success', 4000);
+    } catch (err) {
+      logger.error('ExportManager.downloadToDownloads error', err);
+      showErrorToast({
+        title  : 'Échec du téléchargement',
+        detail : err?.message ?? '',
+        actions: [
+          { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.downloadToDownloads() },
+        ],
+      });
+    } finally {
+      hideOverlay();
+    }
+  }
+}
+
+/* ============================================================
+   INSTANCES
+   ============================================================ */
+const handleStore   = new HandleStore();
+const draftStore    = new DraftStore();
+const draftManager  = new DraftManager(draftStore);
+const fileManager   = new FileManager();
+const exportManager = new ExportManager();
+
+/* ============================================================
+   UTILITAIRES UI
+   ============================================================ */
+/* ============================================================
+   TOAST SYSTEM — simple (info/success/warn) + actionnable (error)
+   ============================================================ */
+
+/**
+ * showToast(msg, type, ttl)
+ * Pour les toasts simples : success | warn | (error simple sans actions)
+ */
+function showToast(msg, type = 'success', ttl = 3000) {
+  const t = document.createElement('div');
+  t.className   = `toast ${type}`;
+  t.textContent = msg;
+  dom.toastWrap.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, ttl);
+}
+
+/**
+ * showErrorToast({ title, detail, actions })
+ * actions : [{ label, style:'primary'|'secondary'|'fix', onClick }]
+ * Persistant — fermé par l'utilisateur ou via action.
+ */
+function showErrorToast({ title, detail = '', actions = [] }) {
+  // Ne pas empiler un toast d'erreur identique déjà visible (même titre)
+  const already = [...dom.toastWrap.querySelectorAll('.toast.error .toast-err-title')]
+    .some(el => el.textContent === title);
+  if (already) return null;
+
+  return showActionToast({ variant: 'error', icon: '🔴', title, detail, actions });
+}
+
+/**
+ * Toast persistant générique avec actions, variante error ou success.
+ */
+function showActionToast({ variant = 'error', icon = '🔴', title, detail = '', actions = [] }) {
+  const t = document.createElement('div');
+  t.className = `toast ${variant}${actions.length ? ' actionable' : ''}`;
+
+  // Construire le HTML interne
+  const actionsHTML = actions.map((a, i) =>
+    `<button class="toast-action-btn tab-${a.style ?? 'primary'}" data-idx="${i}">${a.label}</button>`
+  ).join('');
+
+  t.innerHTML = `
+    <div class="toast-err-top">
+      <span class="toast-err-icon">${icon}</span>
+      <div class="toast-err-body">
+        <div class="toast-err-title">${title}</div>
+        ${detail ? `<div class="toast-err-detail">${detail}</div>` : ''}
+      </div>
+      <button class="toast-err-close" title="Fermer">✕</button>
+    </div>
+    ${actions.length ? `<div class="toast-err-sep"></div><div class="toast-err-actions">${actionsHTML}</div>` : ''}
+  `;
+
+  dom.toastWrap.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+
+  const dismiss = () => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  };
+
+  // Fermer
+  t.querySelector('.toast-err-close').addEventListener('click', dismiss);
+
+  // Actions
+  actions.forEach((a, i) => {
+    t.querySelector(`[data-idx="${i}"]`)?.addEventListener('click', () => {
+      dismiss();
+      a.onClick?.();
+    });
+  });
+
+  return { dismiss };
+}
+
+/* ── Highlight d'une cellule fautive avec restauration de contexte ── */
+async function highlightAndFocusCell(snapshot) {
+  // 1. Si nécessaire, restaurer classe / matière / Ndevoir
+  const needsRestore =
+    dom.fClasseSel.value  !== snapshot.classe  ||
+    dom.fMatiereSel.value !== snapshot.matiere ||
+    dom.nbNotesSel.value  !== String(snapshot.ndevoir);
+
+  if (needsRestore) {
+    // Changer la classe
+    if (dom.fClasseSel.value !== snapshot.classe) {
+      dom.fClasseSel.value = snapshot.classe;
+      dom.fClasseSel.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 80)); // laisser populateMatieres()
+    }
+    // Changer la matière
+    if (dom.fMatiereSel.value !== snapshot.matiere) {
+      dom.fMatiereSel.value = snapshot.matiere;
+      dom.fMatiereSel.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 60));
+    }
+    // Changer Ndevoir
+    if (dom.nbNotesSel.value !== String(snapshot.ndevoir)) {
+      dom.nbNotesSel.value = String(snapshot.ndevoir);
+      dom.nbNotesSel.dispatchEvent(new Event('change'));
+      await new Promise(r => requestAnimationFrame(r));
+    }
+    // Attendre le re-render du tableau
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  // 2. Trouver la cellule : l'input porte directement data-field ET data-id
+  //    (voir InputFactory.noteInput) — on cherche dans le tableau ET les cartes,
+  //    peu importe la vue actuellement active.
+  const allInputs = [...document.querySelectorAll(
+    `#tbodytab input[data-field="${snapshot.champ}"], #cardstab input[data-field="${snapshot.champ}"]`
+  )];
+  const input = allInputs.find(inp => inp.dataset.id === String(snapshot.eleveId)) || allInputs[0];
+
+  if (!input) return;
+
+  // 3. Scroll + focus + highlight
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await new Promise(r => setTimeout(r, 180));
+  input.classList.add('cell-fix-highlight');
+  input.focus();
+
+  // 4. Retirer l'anneau dès que l'utilisateur corrige
+  const cleanup = () => {
+    input.classList.remove('cell-fix-highlight');
+    input.removeEventListener('input',  cleanup);
+    input.removeEventListener('change', cleanup);
+    input.removeEventListener('blur',   cleanup);
+    showToast('Correction en cours…', 'warn', 2000);
+  };
+  input.addEventListener('input',  cleanup, { once: true });
+  input.addEventListener('change', cleanup, { once: true });
+}
+
+function confirmBox(title, message) {
+  return new Promise(resolve => {
+    dom.confirmTitle.textContent   = title;
+    dom.confirmMessage.textContent = message;
+    dom.confirmModal.hidden        = false;
+    dom.btnOk.focus();
+
+    // ✅ #13 — addEventListener + cleanup pour éviter les fuites
+    const clean = result => {
+      dom.confirmModal.hidden = true;
+      dom.btnOk.removeEventListener('click', onOk);
+      dom.btnCancel.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+    const onOk     = () => clean(true);
+    const onCancel = () => clean(false);
+    dom.btnOk.addEventListener('click',     onOk);
+    dom.btnCancel.addEventListener('click', onCancel);
+  });
+}
+
+function showOverlay(text = 'Enregistrement en cours…') {
+  dom.overlayWrap.hidden = false;
+  dom.overlayWrap.querySelector('span').textContent = text;
+}
+function hideOverlay() { dom.overlayWrap.hidden = true; }
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 100);
+}
+
+/* ── Échappement HTML pour les valeurs provenant du JSON ── */
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function normalizeDecimal(s) {
+  return String(s ?? '').trim().replace(',', '.');
+}
+
+function validNoteValue(v) {
+  if (v === '' || v === null || v === undefined) return false;
+  const n = Number(normalizeDecimal(v));
+  return !isNaN(n) && n >= 0 && n <= 20;
+}
+
+// ✅ #15 — cas limites couverts : '', '.', '0.', '00.5'
+function lastNormalizeDecimal(raw) {
+  if (!raw || raw.trim() === '' || raw.trim() === '.') return '0';
+  let v = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
+  if (v === '.' || v === '') return '0';
+  if (v.startsWith('.')) v = '0' + v;
+  const dotIdx  = v.indexOf('.');
+  const intRaw  = dotIdx === -1 ? v : v.slice(0, dotIdx);
+  const decRaw  = dotIdx === -1 ? '' : v.slice(dotIdx + 1, dotIdx + 3);
+  const intPart = intRaw.replace(/^0+(?=\d)/, '') || '0';
+  if (!decRaw || /^0+$/.test(decRaw)) return intPart;
+  return intPart + '.' + decRaw;
+}
+
+// ✅ #5 — n'itère que sur les devoirs actifs (nbrenote)
+function validateAllNotes() {
+  const rowNotes    = state.get('rowNotes');
+  const rowMatieres = state.get('rowMatieres');
+
+  // Contexte actif au moment de la validation (pour snapshot)
+  const activeClasse  = dom.fClasseSel.value;
+  const activeMatiere = dom.fMatiereSel.value;
+  const activeNdevoir = dom.nbNotesSel.value;
+
+  // Vérification cohérence référentielle : matières orphelines
+  const matiereIds = new Set(rowMatieres.map(m => String(m.idmatiere)));
+  for (const r of rowNotes) {
+    if (r.idmatiere && !matiereIds.has(String(r.idmatiere))) {
+      logger.warn(`validateAllNotes : idmatiere "${r.idmatiere}" introuvable dans rowMatieres`);
+    }
+  }
+
+  for (const r of rowNotes) {
+    const matRow   = rowMatieres.find(m => m.idmatiere === r.idmatiere);
+    const matName  = matRow?.namemat ?? '?';
+    const matId    = r.idmatiere;
+    const nbActive = Number(r.nbrenote) || 1;
+
+    // Helper snapshot : retrouve la classe de cette ligne
+    const classeRow = r.fkclasse ?? activeClasse;
+
+    for (let j = 0; j < nbActive; j++) {
+      const f = CONFIG.noteFields[j];
+      if (!validNoteValue(r[f])) {
+        const snap = {
+          classe  : classeRow,
+          matiere : matId,
+          ndevoir : nbActive,
+          eleveId : r[CONFIG.idField],
+          champ   : f,
+          valeur  : r[f],
+        };
+        showErrorToast({
+          title  : `Note invalide — ${escHtml(r.prenomel)} ${escHtml(r.nomel)}`,
+          detail : `Matière : <strong>${escHtml(matName)}</strong> · Champ : <strong>${escHtml(CONFIG.headerLabels[f] ?? f)}</strong><br>Valeur saisie : <em>${escHtml(r[f] ?? '(vide)')}</em> — attendu : 0 à 20`,
+          actions: [
+            {
+              label  : '🎯 Corriger',
+              style  : 'fix',
+              onClick: () => highlightAndFocusCell(snap),
+            },
+          ],
+        });
+        return false;
+      }
+    }
+
+    // Vérifier qu'un devoir inactif ne contient pas de note saisie par erreur
+    for (let j = nbActive; j < CONFIG.noteFields.length; j++) {
+      const f = CONFIG.noteFields[j];
+      if (Number(r[f]) > 0) {
+        const snap = {
+          classe  : r.fkclasse ?? activeClasse,
+          matiere : matId,
+          ndevoir : nbActive,
+          eleveId : r[CONFIG.idField],
+          champ   : f,
+          valeur  : r[f],
+        };
+        showErrorToast({
+          title  : `Note hors Ndevoir — ${escHtml(r.prenomel)} ${escHtml(r.nomel)}`,
+          detail : `Matière : <strong>${escHtml(matName)}</strong> · <strong>${escHtml(CONFIG.headerLabels[f] ?? f)}</strong> contient une valeur alors que Ndevoir = ${nbActive}`,
+          actions: [
+            {
+              label  : '🎯 Corriger',
+              style  : 'fix',
+              onClick: () => highlightAndFocusCell(snap),
+            },
+          ],
+        });
+        return false;
+      }
+    }
+
+    if (!validNoteValue(r[CONFIG.compoField])) {
+      const snap = {
+        classe  : r.fkclasse ?? activeClasse,
+        matiere : matId,
+        ndevoir : nbActive,
+        eleveId : r[CONFIG.idField],
+        champ   : CONFIG.compoField,
+        valeur  : r[CONFIG.compoField],
+      };
+      showErrorToast({
+        title  : `Composition invalide — ${escHtml(r.prenomel)} ${escHtml(r.nomel)}`,
+        detail : `Matière : <strong>${escHtml(matName)}</strong><br>Valeur saisie : <em>${escHtml(r[CONFIG.compoField] ?? '(vide)')}</em> — attendu : 0 à 20`,
+        actions: [
+          {
+            label  : '🎯 Corriger',
+            style  : 'fix',
+            onClick: () => highlightAndFocusCell(snap),
+          },
+        ],
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
+/* ============================================================
+   DONNÉES EN MÉMOIRE                                        ✅ #20
+   ============================================================ */
+function getCellVal(row, field) { return row[field] ?? ''; }
+
+function setCellVal(row, field, val) {
+  row[field]  = val; row.__dirty = true;
+  markUnsaved(); draftManager.schedule();
+}
+
+// ✅ #20 — effet de bord UI isolé
+function markUnsaved() {
+  state.set('unsaved', true);
+  dom.msgState.textContent = '🔷Modifié';
+}
+
+/* ============================================================
+   CHARGEMENT JSON — découpé en sous-fonctions               ✅ #6
+   ============================================================ */
+let currentMeta = {};
+
+// ✅ #6a — parsing + validation structurelle uniquement
+function parseAndValidateJSON(text) {
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch { showToast('JSON invalide ou corrompu', 'error'); return null; }
+
+  const { notes_mpr, matieres_mpr, infos_mpr } = parsed;
+  if (!Array.isArray(notes_mpr) || !Array.isArray(matieres_mpr)) {
+    showToast('Structure JSON invalide (notes / matieres attendus)', 'error', 4000);
+    return null;
+  }
+  return { notes_mpr, matieres_mpr, infos_mpr };
+}
+
+// ✅ #6b — validation des clés métier
+function validateJSONKeys(notes) {
+  if (!notes.length) return true;
+  const keys    = Object.keys(notes[0]).map(k => k.trim().toLowerCase());
+  const missing = CONFIG.requiredKeys.filter(k => !keys.includes(k));
+  if (missing.length) {
+    showToast('Clés manquantes : ' + missing.join(', '), 'error', 4000);
+    return false;
+  }
+  return true;
+}
+
+// ✅ #6b — normalisation des clés en minuscules
+function normalizeRows(rows) {
+  return rows.map(r =>
+    Object.fromEntries(Object.entries(r).map(([k, v]) => [k.trim().toLowerCase(), v]))
+  );
+}
+
+// ✅ #6c — affichage signature dans le DOM
+function displaySignature(meta) {
+  dom.txtPeriode.textContent = `${meta.datasequ ?? ''} | ${meta.forprof ?? ''}`;
+  dom.txtSource.textContent  = `${meta.source   ?? ''} | ${meta.generatedAt ?? ''}`;
+}
+
+// ✅ #6c — application des données dans state + UI
+function applyDataset(parsedNotes, parsedMatieres, meta) {
+  currentMeta = {...currentMeta, ...meta};
+  displaySignature(currentMeta);
+  state.set('currentSourceId', currentMeta?.datasequ || 'id_json');
+  state.set('rowNotes',        parsedNotes);
+  state.set('rowMatieres',     parsedMatieres);
+  state.set('headers',         Object.keys(parsedNotes[0] ?? {}));
+  state.set('unsaved',         false);
+  state.set('filtered',        []);
+
+  fillFilters();
+}
+
+async function loadJSONDataset(file, hasWriteAccess = false) {
+  try {
+    if (!file) { showToast('Aucun fichier fourni', 'error'); return; }
+    if (!file.name?.toLowerCase().endsWith('.json')) { showToast('Fichier JSON requis', 'error'); return; }
+
+    const text   = await file.text();
+    const parsed = parseAndValidateJSON(text);              // ✅ #6a
+    if (!parsed) return;
+
+    const { notes_mpr, matieres_mpr, infos_mpr } = parsed;
+    if (!validateJSONKeys(notes_mpr)) { state.set('rowNotes', []); state.set('rowMatieres', []); return; }
+
+    const parsedNotes    = normalizeRows(notes_mpr);            // ✅ #6b
+    const parsedMatieres = normalizeRows(matieres_mpr);
+
+    applyDataset(parsedNotes, parsedMatieres, infos_mpr);    // ✅ #6c
+
+    // Tentative de restauration du brouillon
+    // hasWriteAccess est passé explicitement — on ne consulte plus canWrite() ici
+    const draft = await draftManager.tryRestore(restored => {
+      if (!hasWriteAccess) {
+        showToast('Notes non enregistrées retrouvées, veuillez recharger le fichier d\'origine.', 'warn', 6000);
+        dom.msgState.textContent = '🔷Notes non enregistrées, recharger le même fichier';
+      } else {
+        dom.msgState.textContent = '🔷Brouillon restauré.';
+        attachDeleteDraftBtn('Voulez-vous effacer le brouillon de notes ? Confirmer');
+        showToast('Notes non enregistrées, restaurées. Supprimez si nécessaire', 'warn');
+      }
+    });
+
+    if (!draft) {
+      dom.msgState.textContent = '✔ Données chargées';
+      showToast('Données chargées', 'success');
+    }
+    return true; // ✅ #25 — signale un chargement réussi (fichier valide)
+  } catch (err) {
+    logger.error('loadJSONDataset', err);
+    showToast(err.message || 'Erreur chargement JSON', 'error');
+    return false;
+  }
+}
+
+/* ============================================================
+   FILTRES
+   ============================================================ */
+function fillFilters() {
+  const classesMap  = new Map();
+  const rowMatieres = state.get('rowMatieres');
+  rowMatieres.forEach(r => {
+    if (r.fkclasse && !classesMap.has(r.fkclasse))
+      classesMap.set(r.fkclasse, r.nomclasse || r.fkclasse);
+  });
+  dom.fClasseSel.innerHTML = '<option value="" disabled selected>— Choisir —</option>';
+  classesMap.forEach((nom, id) => {
+    const opt = Object.assign(document.createElement('option'), { value: id, textContent: nom });
+    dom.fClasseSel.appendChild(opt);
+  });
+  populateMatieres();
+}
+
+function populateMatieres(selectedClasse = '') {
+  if (!selectedClasse) {
+    dom.fMatiereSel.innerHTML = '<option value="" disabled selected>— Choisir —</option>';
+    state.set('isOptionMat', false);
+    return;
+  }
+  const list = state.get('rowMatieres')
+    .filter(r => String(r.fkclasse) === String(selectedClasse))
+    .map(r   => ({ id: r.idmatiere, name: r.namemat, opt: r.affichopt }))
+    .filter(m => m.id);
+
+  // Construction DOM sécurisée (pas d'innerHTML avec données JSON)
+  dom.fMatiereSel.innerHTML = '';
+  const placeholder = Object.assign(document.createElement('option'), {
+    value: '', disabled: true, selected: true, textContent: '— Choisir —'
+  });
+  dom.fMatiereSel.appendChild(placeholder);
+  list.forEach(m => {
+    const opt = Object.assign(document.createElement('option'), {
+      value: m.id,
+      textContent: m.name,
+    });
+    opt.dataset.option = m.opt ?? '0';
+    dom.fMatiereSel.appendChild(opt);
+  });
+
+  dom.fMatiereSel.value = '';
+  state.set('isOptionMat', false);
+  state.set('filtered', []);
+}
+
+function applyFilters() {
+  const matSel = dom.fMatiereSel.value;
+  const clsSel = dom.fClasseSel.value;
+  if (!matSel) {
+    state.set('filtered', []);
+    dom.effectif.textContent = 'Effectif : 0';
+    render();
+    return;
+  }
+  const filtered = state.get('rowNotes').filter(r =>
+    String(r.idmatiere ?? '') === String(matSel) &&
+    (!clsSel || String(r.fkclasse ?? '') === String(clsSel))
+  );
+  state.set('filtered', filtered);
+  dom.effectif.textContent = `Effectif : ${filtered.length}`;
+  render();
+}
+
+// ✅ #9 — mise à jour nbNotes séparée de l'appel applyFilters
+function updateNbNotes(newVal) {
+  state.set('nbNotes', newVal);
+  state.get('filtered').forEach(r => { r.nbrenote = newVal; });
+}
+
+function majNbreNotes() {
+  if (!dom.fMatiereSel.value || !dom.fClasseSel.value) {
+    showToast('Classe et Matière requises', 'warn');
+    dom.nbNotesSel.value = state.get('nbNotes');
+    return;
+  }
+  updateNbNotes(Number(dom.nbNotesSel.value) || 1);       // ✅ #9
+  applyFilters();
+}
+
+/* ============================================================
+   RENDER — TableRenderer                                    ✅ #7 #8 #19
+   ============================================================ */
+const TableRenderer = {
+
+  // ✅ #7 — colonnes actives extraites en une seule fonction
+  getActiveCols() {
+    const cols = [
+      CONFIG.idField, CONFIG.nomField, CONFIG.prenomField, CONFIG.genreField,
+    ];
+    if (state.get('isOptionMat')) cols.push(CONFIG.optionField);
+    const nbNotes = state.get('nbNotes');
+    for (let i = 0; i < nbNotes; i++) cols.push(CONFIG.noteFields[i]);
+    cols.push(CONFIG.compoField);
+    return cols;
+  },
+
+  // ✅ #8 — helpers regroupés dans TableRenderer
+  makeTd(v) {
+    return Object.assign(document.createElement('td'), { textContent: v || '' });
+  },
+  makeTdInput(row, f, rowIdx) {
+    const td = document.createElement('td');
+    td.appendChild(InputFactory.noteInput(row, f, rowIdx));
+    return td;
+  },
+  makeTdCheck(row, f) {
+    const td = document.createElement('td');
+    td.appendChild(InputFactory.checkbox(row, f));
+    return td;
+  },
+
+  renderTable() {
+    const cols = this.getActiveCols();
+    dom.theadtab.innerHTML = '<tr>' + cols.map(h => `<th>${CONFIG.headerLabels[h] ?? h}</th>`).join('') + '</tr>';
+    dom.tbodytab.innerHTML = '';
+    const frag    = document.createDocumentFragment();
+    const nbNotes = state.get('nbNotes');
+    state.get('filtered').forEach((r, rowIdx) => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = String(r[CONFIG.idField] ?? '');
+      tr.appendChild(this.makeTd(getCellVal(r, CONFIG.idField)));
+      tr.appendChild(this.makeTd(getCellVal(r, CONFIG.nomField)));
+      tr.appendChild(this.makeTd(getCellVal(r, CONFIG.prenomField)));
+      tr.appendChild(this.makeTd(getCellVal(r, CONFIG.genreField)));
+      if (state.get('isOptionMat')) tr.appendChild(this.makeTdCheck(r, CONFIG.optionField));
+      for (let i = 0; i < nbNotes; i++) tr.appendChild(this.makeTdInput(r, CONFIG.noteFields[i], rowIdx));
+      tr.appendChild(this.makeTdInput(r, CONFIG.compoField, rowIdx));
+      frag.appendChild(tr);
+    });
+    dom.tbodytab.appendChild(frag);
+  },
+
+  renderCards() {
+    dom.cardstab.innerHTML = '';
+    const frag    = document.createDocumentFragment();
+    const nbNotes = state.get('nbNotes');
+    state.get('filtered').forEach((r, rowIdx) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const cardHeader = document.createElement('div');
+      cardHeader.className = 'card-header';
+      cardHeader.textContent = `${getCellVal(r, CONFIG.nomField)} ${getCellVal(r, CONFIG.prenomField)} | ${getCellVal(r, CONFIG.genreField)}`;
+      card.appendChild(cardHeader);
+      const grid = document.createElement('div');
+      grid.className = 'card-grid';
+
+      if (state.get('isOptionMat')) {
+        const lbl = Object.assign(document.createElement('label'), { className: 'toggle-switch', textContent: 'Exempté' });
+        lbl.style.gridColumn = '1/-1';
+        lbl.appendChild(InputFactory.checkbox(r, CONFIG.optionField));
+        lbl.appendChild(Object.assign(document.createElement('span'), { className: 'slider-toggle' }));
+        grid.appendChild(lbl);
+      }
+      for (let i = 0; i < nbNotes; i++) {
+        grid.appendChild(Object.assign(document.createElement('div'), { textContent: 'Devoir ' + (i + 1) }));
+        grid.appendChild(InputFactory.noteInput(r, CONFIG.noteFields[i], rowIdx));
+      }
+      grid.appendChild(Object.assign(document.createElement('div'), { textContent: 'Compo' }));
+      grid.appendChild(InputFactory.noteInput(r, CONFIG.compoField, rowIdx));
+      card.appendChild(grid);
+      frag.appendChild(card);
+    });
+    dom.cardstab.appendChild(frag);
+  },
+};
+
+// ✅ #19 — guard explicite pour rendu vide
+function render() {
+  const headers  = state.get('headers');
+  const filtered = state.get('filtered');
+
+  if (!headers.length || !filtered.length) {
+    dom.theadtab.innerHTML = dom.tbodytab.innerHTML = dom.cardstab.innerHTML = '';
+    return;
+  }
+  state.get('currentView') === 'table'
+    ? TableRenderer.renderTable()
+    : TableRenderer.renderCards();
+}
+
+// ✅ #22 — re-rend le tableau si le mode d'interaction change en cours de session
+// (souris branchée/débranchée sur PC tactile, rotation d'écran, redimensionnement de fenêtre)
+InteractionMode.onChange(() => {
+  numpad.close();
+  render();
+});
+/* ============================================================
+   PAVÉ NUMÉRIQUE MOBILE
+   ============================================================ */
+const numpad = (() => {
+  // ── Activer VirtualKeyboard overlay si disponible ──
+  if ('virtualKeyboard' in navigator) {
+    navigator.virtualKeyboard.overlaysContent = true;
+  }
+
+  const sheet    = document.getElementById('numpadSheet');
+  const backdrop = document.getElementById('numpadBackdrop');
+  const elName   = document.getElementById('npEleveName');
+  const elPos    = document.getElementById('npElevePos');
+  const fLabel   = document.getElementById('npFieldLabel');
+  const fValue   = document.getElementById('npFieldValue');
+  const commaKey = document.getElementById('npCommaKey');
+  const delKey   = document.getElementById('npDelKey');
+  const btnPrevE = document.getElementById('npPrevEleve');
+  const btnNextE = document.getElementById('npNextEleve');
+  const btnPrevF = document.getElementById('npPrevField');
+  const btnNextF = document.getElementById('npNextField');
+  const compactToggle = document.getElementById('npCompactToggle');
+
+  let curValue   = '';   // valeur en cours de saisie (string)
+  let curRow     = null; // objet rowNotes courant
+  let curRowIdx  = 0;    // index dans filtered[]
+  let curField   = '';   // nom du champ (devoir11, componote…)
+  let curFields  = [];   // colonnes actives pour cette ligne
+
+  // ✅ #24 — mode compact : masque nom/prénom + libellé, met en évidence
+  // la cellule éditée directement dans le tableau à la place. Préférence mémorisée.
+  let compact = (() => { try { return localStorage.getItem('np_compact') === '1'; } catch (_) { return false; } })();
+  if (compact) sheet.classList.add('compact');
+
+  function setCompact(next) {
+    compact = next;
+    sheet.classList.toggle('compact', compact);
+    try { localStorage.setItem('np_compact', compact ? '1' : '0'); } catch (_) {}
+    if (compact) highlightCurrentCell(); else clearCellHighlight();
+  }
+  compactToggle.addEventListener('click', () => setCompact(!compact));
+
+  // ── Trouve et surligne la cellule du tableau correspondant à curRow/curField ──
+  function clearCellHighlight() {
+    document.querySelectorAll('.cell-fix-highlight').forEach(el => el.classList.remove('cell-fix-highlight'));
+  }
+  function highlightCurrentCell() {
+    clearCellHighlight();
+    if (!curRow) return;
+    // Cherche dans les deux vues possibles (tableau desktop / cartes mobile) :
+    // l'input porte data-id directement (voir InputFactory.noteInput)
+    const input = document.querySelector(
+      `input[data-field="${curField}"][data-id="${curRow[CONFIG.idField]}"]`
+    );
+    if (!input) return;
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.classList.add('cell-fix-highlight');
+  }
+
+  // ── Calcule les colonnes de saisie actives ──
+  function getActiveFields() {
+    const nb = Number(dom.nbNotesSel?.value) || state.get('nbNotes') || 1;
+    const f  = [];
+    for (let i = 0; i < nb; i++) f.push(CONFIG.noteFields[i]);
+    f.push(CONFIG.compoField);
+    return f;
+  }
+
+  // ── Rafraîchit l'affichage du pavé ──
+  function refresh() {
+    const filtered = state.get('filtered');
+    curRow = filtered[curRowIdx] ?? null;
+    if (!curRow) return;
+
+    // Contexte élève
+    elName.textContent = `${curRow[CONFIG.nomField] ?? ''} ${curRow[CONFIG.prenomField] ?? ''}`.trim();
+    elPos.textContent  = `${curRowIdx + 1} / ${filtered.length}`;
+
+    // Champ
+    fLabel.textContent = CONFIG.headerLabels[curField] ?? curField;
+    updateDisplay();
+
+    // Nav élèves
+    btnPrevE.disabled = curRowIdx === 0;
+    btnNextE.disabled = curRowIdx === filtered.length - 1;
+
+    // Nav champs
+    const fi = curFields.indexOf(curField);
+    btnPrevF.disabled = curRowIdx === 0 && fi === 0;
+    btnNextF.disabled = curRowIdx === filtered.length - 1 && fi === curFields.length - 1;
+
+    // Virgule : désactivée si valeur déjà présente ou partie entière > 20
+    const hasComma = curValue.includes(',');
+    const intPart  = curValue.split(',')[0] || '0';
+    commaKey.disabled = hasComma || Number(intPart) > 20;
+
+    // La cellule en cours de saisie reste toujours visible/mise en évidence
+    // dans le tableau/carte derrière le pavé (pas seulement en mode compact)
+    highlightCurrentCell();
+  }
+
+  function updateDisplay() {
+    fValue.textContent = curValue === '' ? '—' : curValue;
+    const n = Number(curValue.replace(',', '.'));
+    fValue.className = 'np-field-value ' +
+      (curValue === '' ? '' : !validNoteValue(curValue.replace(',', '.')) ? 'invalid' : n === 0 ? 'zero' : 'ok');
+  }
+
+  // ── Applique setCellVal immédiatement ──
+  function commit() {
+    if (!curRow || curField === '') return;
+    const normalized = curValue === '' ? '' : lastNormalizeDecimal(curValue.replace(',', '.'));
+    setCellVal(curRow, curField, normalized === '' ? '' : normalized);
+    // Sync l'input DOM correspondant si visible
+    const inp = document.querySelector(
+      `input[data-field="${curField}"][data-id="${curRow[CONFIG.idField]}"]`
+    );
+    if (inp) {
+      inp.value = normalized === '' ? '' : String(normalized).replace('.', ',');
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
+  // ── Frappe d'une touche ──
+  function press(v) {
+    if (v === 'DEL') {
+      curValue = curValue.slice(0, -1);
+      commit();
+      refresh();
+      return;
+    }
+    // Comma
+    if (v === ',') {
+      if (curValue.includes(',')) return;
+      const intPart = curValue || '0';
+      // Autorise la virgule si partie entière = 20 (pour saisir 20,0)
+      // Bloque seulement si partie entière > 20 (impossible normalement)
+      if (Number(intPart) > 20) return;
+      curValue = (curValue || '0') + ',';
+      commit(); refresh(); return;
+    }
+    // Chiffre
+    const [intPart = '', decPart] = curValue.split(',');
+    if (decPart !== undefined) {
+      // Après la virgule : max 2 chiffres
+      if (decPart.length >= 2) return;
+      const next = curValue + v;
+      if (Number(next.replace(',', '.')) > 20) { CapPlugins?.Haptics?.impact({ style: CapPlugins.ImpactStyle.Light }).catch(()=>{}); return; }
+      curValue = next;
+    } else {
+      // Avant la virgule : max 2 chiffres
+      // ✅ #23 — un simple "0" pré-rempli (valeur existante = 0, ou fraîchement ouvert)
+      // doit être REMPLACÉ par le premier chiffre tapé, pas concaténé ("0"+"1" → "01" bloquait ensuite)
+      if (intPart === '0') {
+        curValue = v;
+        commit();
+        refresh();
+        return;
+      }
+      if (intPart.length >= 2) return;
+      const candidate = intPart + v;
+      if (Number(candidate) > 20) { CapPlugins?.Haptics?.impact({ style: CapPlugins.ImpactStyle.Light }).catch(()=>{}); return; }
+      curValue = candidate;
+    }
+    commit();
+    refresh();
+  }
+
+  // ── Navigation champs ──
+  function goField(direction) {
+    const fi = curFields.indexOf(curField);
+    const nextFi = fi + direction;
+    if (nextFi >= 0 && nextFi < curFields.length) {
+      curField  = curFields[nextFi];
+      curValue  = String(curRow?.[curField] ?? '').replace('.', ',');
+      refresh();
+      return;
+    }
+    // Débordement → changer d'élève
+    goEleve(direction);
+  }
+
+  // ── Navigation élèves ──
+  function goEleve(direction) {
+    const filtered = state.get('filtered');
+    const next = curRowIdx + direction;
+    if (next < 0 || next >= filtered.length) {
+      if (direction > 0) close(); // fin de liste → ferme
+      return;
+    }
+    curRowIdx = next;
+    curField  = direction > 0 ? curFields[0] : curFields[curFields.length - 1];
+    curValue  = String(state.get('filtered')[curRowIdx]?.[curField] ?? '').replace('.', ',');
+    refresh();
+  }
+
+  // ── Swipe down pour fermer ──
+  let touchStartY = 0;
+  sheet.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+  sheet.addEventListener('touchend',   e => {
+    if (e.changedTouches[0].clientY - touchStartY > 60) close();
+  }, { passive: true });
+
+  // ── Appui long sur ⌫ → efface tout ──
+  let delTimer;
+  delKey.addEventListener('touchstart', () => {
+    delTimer = setTimeout(() => { curValue = ''; commit(); refresh(); }, 500);
+  }, { passive: true });
+  delKey.addEventListener('touchend', () => clearTimeout(delTimer), { passive: true });
+
+  // ── Touches du pavé ──
+  document.getElementById('npGrid').addEventListener('click', e => {
+    const key = e.target.closest('.np-key');
+    if (!key || key.disabled) return;
+    key.classList.add('pressed');
+    setTimeout(() => key.classList.remove('pressed'), 120);
+    press(key.dataset.v);
+  });
+
+  // ── Cycle de champs via tap sur le label ──
+  fLabel.addEventListener('click', () => goField(1));
+
+  // ── Nav champs bas ──
+  btnPrevF.addEventListener('click', () => goField(-1));
+  btnNextF.addEventListener('click', () => goField(1));
+
+  // ── Nav élèves ──
+  btnPrevE.addEventListener('click', () => goEleve(-1));
+  btnNextE.addEventListener('click', () => goEleve(1));
+
+  // ── Fermer via backdrop ──
+  backdrop.addEventListener('click', close);
+
+  function open(row, rowIdx, field) {
+    curRow    = row;
+    curRowIdx = rowIdx;
+    curFields = getActiveFields();
+    curField  = field ?? curFields[0];
+    curValue  = String(row?.[curField] ?? '').replace('.', ',');
+    sheet.classList.add('open');
+    backdrop.classList.add('open');
+    refresh();
+  }
+
+  function close() {
+    sheet.classList.remove('open');
+    backdrop.classList.remove('open');
+    // Focus perdu → retirer highlight si présent
+    clearCellHighlight();
+  }
+
+  // ── Branche un input mobile ──
+  function bindInput(input, row, rowIdx, field) {
+    input.readOnly     = true;
+    input.inputMode    = 'none';
+    input.tabIndex     = -1;          // empêche focus natif
+    input.style.cursor = 'pointer';
+    // touchstart = réponse immédiate sans délai 300ms
+    input.addEventListener('touchstart', e => {
+      e.preventDefault();             // bloque focus natif + clavier OS
+      open(row, rowIdx, field);
+    }, { passive: false });
+    // fallback souris (test desktop simulé)
+    input.addEventListener('mousedown', e => {
+      e.preventDefault();
+      open(row, rowIdx, field);
+    });
+  }
+  
+  return { open, close, bindInput };
+})();
+
+/* ============================================================
+   FACTORY INPUTS — regroupement des créateurs d'inputs      ✅ #8
+   ============================================================ */
+const InputFactory = {
+
+  noteInput(row, fieldName, rowIdx = 0) {
+    const input = Object.assign(document.createElement('input'), {
+      type        : 'text',
+      inputMode   : 'decimal',
+      pattern     : '[0-9]+([,.][0-9]+)?',
+      value       : formatForDisplay(getCellVal(row, fieldName)),
+      autocomplete: 'off',
+    });
+    input.dataset.field = fieldName;
+    input.dataset.id    = String(row[CONFIG.idField] ?? '');
+
+    const paint = val => {
+      const n = normalizeDecimal(val);
+      input.className = !validNoteValue(n) ? 'note-invalid' : Number(n) === 0 ? 'note-zero' : '';
+    };
+
+    if (InteractionMode.isMobile) {
+      numpad.bindInput(input, row, rowIdx, fieldName);
+    } else {
+      input.addEventListener('input',  () => { input.value = input.value.replace(/[^0-9.,]/g, ''); });
+      input.addEventListener('change', () => {
+        input.value = lastNormalizeDecimal(input.value);
+        setCellVal(row, fieldName, input.value);
+        paint(input.value);
+      });
+      input.addEventListener('focus',   () => input.select());
+      input.addEventListener('keydown', e  => navigateInput(input, e));
+    }
+
+    paint(input.value);
+    return input;
+  },
+
+  checkbox(row, fieldName) {
+    const cb    = Object.assign(document.createElement('input'), { type: 'checkbox' });
+    cb.checked  = Number(getCellVal(row, fieldName)) !== 0;
+    cb.addEventListener('change', () => setCellVal(row, fieldName, cb.checked ? 1 : 0));
+    return cb;
+  },
+};
+
+/* ============================================================
+   NAVIGATION CLAVIER
+   ============================================================ */
+function navigateInput(input, e) {
+  const { key } = e;
+  const start   = input.selectionStart;
+  const end     = input.selectionEnd;
+  const len     = input.value.length;
+  if (key === 'ArrowLeft')  { if (start > 0) return; e.preventDefault(); focusCellule(input, 0, -1); }
+  if (key === 'ArrowRight') { if (end < len) return; e.preventDefault(); focusCellule(input, 0,  1); }
+  if (key === 'ArrowUp')    { e.preventDefault(); focusCellule(input, -1, 0); }
+  if (key === 'ArrowDown')  { e.preventDefault(); focusCellule(input,  1, 0); }
+}
+
+function focusCellule(currentInput, rowOffset, colOffset) {
+  const td     = currentInput.closest('td');
+  const tr     = td?.parentElement;
+  if (!tr) return;
+  const tbody  = tr.parentElement;
+  const ri     = [...tbody.children].indexOf(tr);
+  const ci     = [...tr.children].indexOf(td);
+  const target = tbody.children[ri + rowOffset]?.children[ci + colOffset]?.querySelector('input');
+  if (target) target.focus();
+}
+
+/* ============================================================
+   HELPERS AFFICHAGE
+   ============================================================ */
+function formatForDisplay(v) {
+  return (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+}
+
+/* ============================================================
+   UI DIVERS
+   ============================================================ */
+function attachDeleteDraftBtn(text) {
+  const btn = Object.assign(document.createElement('button'), { textContent: '❌' });
+  dom.msgState.appendChild(btn);
+  btn.onclick = async () => {
+    if (!await confirmBox('Attention', text)) return;
+    await draftManager.deleteCurrent();
+    dom.msgState.textContent = 'Continuer ou charger un fichier';
+    state.set('unsaved', false);
+  };
+}
+
+/* ============================================================
+   WIRING ÉVÉNEMENTS
+   ============================================================ */
+dom.openBtn.addEventListener('click', async () => {
+  if (state.get('unsaved') && !confirm('Données non sauvegardées. Continuer ?')) return;
+  if (state.get('user_id')) {
+    main.sync.chargedt().catch(e => showToast('Erreur chargement serveur', 'error'));
+    return;
+  } else {
+    await fileManager.open();
+  }
+});
+
+// Empêche le double-clic pendant une opération async (évite double validation/
+// double sauvegarde et les toasts d'erreur dupliqués qui en résultent).
+function guardBusyClick(btn, fn) {
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('is-busy');
+    try { await fn(); }
+    finally {
+      btn.disabled = false;
+      btn.classList.remove('is-busy');
+    }
+  });
+}
+
+guardBusyClick(dom.saveBtn,      async () => { await draftManager.flushNow(); await fileManager.save(); });
+guardBusyClick(dom.exportBtn,    ()      => exportManager.export());
+guardBusyClick(dom.expDownload,  ()      => exportManager.downloadToDownloads());
+
+dom.fClasseSel.addEventListener('change', ()  => populateMatieres(dom.fClasseSel.value));
+dom.fMatiereSel.addEventListener('change', e  => {
+  state.set('isOptionMat', (e.target.selectedOptions[0]?.dataset.option ?? '0') !== '0');
+  majNbreNotes();
+});
+dom.nbNotesSel.addEventListener('change', () => majNbreNotes());
+
+// Icônes pour le toggle table/cartes : chacune symbolise la vue VERS LAQUELLE le clic bascule
+const VIEW_TOGGLE_ICONS = {
+  // icône "cartes" (affichée quand on est en vue tableau → clic passe en cartes)
+  card : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
+  // icône "tableau" (affichée quand on est en vue cartes → clic revient au tableau)
+  table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17"/><path d="M9 9.5V19.5"/></svg>',
+};
+
+// Met à jour l'icône/texte/aria-label du bouton selon la vue courante
+function updateViewToggleIcon(current) {
+  const target = current === 'table' ? 'card' : 'table';
+  dom.toggleBtn.querySelector('.ico').innerHTML = VIEW_TOGGLE_ICONS[target];
+  dom.toggleBtn.querySelector('.txt').textContent = target === 'card' ? 'Cartes' : 'Tableau';
+  const label = target === 'card' ? 'Passer en vue cartes' : 'Passer en vue tableau';
+  dom.toggleBtn.setAttribute('aria-label', label);
+  dom.toggleBtn.setAttribute('title', label);
+}
+
+dom.toggleBtn.addEventListener('click', () => {
+  const next = state.get('currentView') === 'table' ? 'card' : 'table';
+  state.set('currentView', next);
+  dom.tableWrap.style.display = next === 'card' ? 'none' : 'block';
+  dom.cardstab.style.display  = next === 'card' ? 'flex'  : 'none';
+
+  updateViewToggleIcon(next);
+  render();
+});
+
+// Init icône au chargement
+updateViewToggleIcon(state.get('currentView') === 'card' ? 'card' : 'table');
+
+//dom.toggleHeaderBtn.addEventListener('click', toggleHeader);
+
+dom.fileInput.addEventListener('change', async ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  dom.fileInput.value = '';
+  try {
+    if (f.name.toLowerCase().endsWith('.json')) {
+      fileManager.clearHandle();
+      await loadJSONDataset(f, false);
+    } else {
+      showToast('Fichier JSON requis', 'error');
+    }
+  } catch (e) {
+    logger.error('fileInput onchange', e);
+    showToast('Erreur lecture fichier', 'error');
+  }
+});
+
+/* ============================================================
+   GUIDE MULTI-ÉTAPES — moteur spotlight
+   ============================================================ */
+const guide = (() => {
+  const ICO = {
+    open   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12a1.5 1.5 0 0 0 1.06.44H19.5A1.5 1.5 0 0 1 21 9.5"/><path d="M3 7.5v9A1.5 1.5 0 0 0 4.5 18h13.44a1.5 1.5 0 0 0 1.45-1.11l1.88-6.9a1.2 1.2 0 0 0-1.16-1.5H6a1.5 1.5 0 0 0-1.45 1.11L3 15"/></svg>',
+    view   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
+    save   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.75H17a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7.5L8 3.75Z"/><path d="M9 3.75V8h6"/><circle cx="12" cy="14.25" r="2.25"/></svg>',
+    export : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16C5 9.5 9 5.5 15 5.5"/><path d="M12 3l3 2.5-3 2.5"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg>',
+    server : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="6" rx="1.5"/><rect x="3.5" y="13.5" width="17" height="6" rx="1.5"/><circle cx="7" cy="7.5" r=".75" fill="currentColor" stroke="none"/><circle cx="7" cy="16.5" r=".75" fill="currentColor" stroke="none"/></svg>',
+  };
+  // Construit un titre de bulle avec la même icône que le bouton référencé
+  const t = (ico, label) => ico ? `<span class="guide-ico">${ico}</span>${label}` : label;
+
+  const STEPS = [
+    {
+      targetId : null,
+      title    : '✦ Bienvenue dans le Guide',
+      desc     : 'Ce guide vous accompagne pas à pas pour maîtriser l\'application <strong>Saisie de Notes</strong>.<br><br>Utilisez <strong>Suivant / Précédent</strong> pour naviguer, ou cliquez <strong>✕</strong> pour fermer à tout moment.',
+    },
+    {
+      targetId : 'openBtn',
+      title    : t(ICO.open, 'Charger'),
+      desc     : 'Si vous êtes <strong>connecté au serveur</strong> (voir Connexion), charge directement les données depuis la base centrale.<br><br>Sinon, ouvre un fichier <strong>JSON</strong> exporté au préalable, contenant élèves, matières et notes existantes.',
+    },
+    {
+      targetId : 'toggleView',
+      title    : t(ICO.view, "Changer l'affichage"),
+      desc     : 'Basculez entre la <strong>vue tableau</strong> (desktop) et la <strong>vue cartes</strong> (mobile) selon votre préférence.<br><br>Sur mobile, la vue cartes est activée automatiquement.',
+    },
+    {
+      targetId : 'saveBtn',
+      title    : t(ICO.save, 'Enregistrer'),
+      desc     : 'Sauvegarde les modifications directement dans le fichier de notes ouvert, sur l\'appareil.<br><br>Le fichier d\'origine est mis à jour, sans étape supplémentaire.',
+    },
+    {
+      targetId : 'exportBtn',
+      title    : t(ICO.export, 'Exporter'),
+      desc     : 'Si vous êtes <strong>connecté au serveur</strong>, envoie directement les notes vers la base centrale.<br><br>Sinon, génère un fichier <strong>CSV</strong> et ouvre le partage natif (Drive, mail, WhatsApp...) pour l\'envoyer où vous voulez.',
+    },
+    {
+      targetId : 'expDownload',
+      title    : t(ICO.download, 'Télécharger'),
+      desc     : 'Copie le fichier <strong>CSV</strong> directement dans le dossier <strong>Téléchargements</strong> de l\'appareil, sans passer par le partage.<br><br>Pratique pour retrouver le fichier plus tard dans vos téléchargements.',
+    },
+    {
+      targetId : 'netToggle',
+      title    : t(ICO.server, 'Connexion Serveur'),
+      desc     : 'Connectez-vous au <strong>serveur central</strong> pour charger ou envoyer les données en ligne.<br><br>Le voyant rouge 🔴 indique que vous êtes hors connexion ; vert 🟢 = connecté.',
+    },
+    {
+      targetId : null,
+      title    : '🔷 Saisie des notes',
+      desc     : `Avant de saisir les notes, configurez les trois sélecteurs de la barre d'outils :<br><br>
+<strong>📌 Classe</strong> — Sélectionnez la classe concernée.<br>
+<strong>📌 Matière</strong> — Choisissez la matière à noter.<br>
+<strong>📌 Ndevoir</strong> — Nombre de devoirs à afficher : <strong>1, 2 ou 3</strong> (défaut : 1).<br><br>
+<strong>Types et limites de notes autorisés :</strong><br>
+• <strong>Devoirs (1 à 3)</strong> : note sur <strong>20</strong> — valeurs décimales acceptées (ex. 13.5)<br>
+• <strong>Composition</strong> : note sur <strong>20</strong> — même règle<br>
+• Valeur <strong>0</strong> autorisée (cellule surlignée en rouge pâle)<br>
+• Valeur <strong>vide</strong> = note non encore saisie<br>
+• Valeur hors intervalle [0 – 20] signalée en <strong>orange</strong>`,
+      highlightIds : ['fClasseSel', 'fMatiereSel', 'nbNotesSel'],
+    },
+    {
+      targetId : null,
+      title    : 'ℹ️ À propos',
+      desc     : `<strong>Saisie de Notes</strong> — version <strong>v3</strong><br><br>
+Éditeur : <strong>Aklogistical</strong><br>
+Contact : <a href="mailto:aklogistical@gmail.com">aklogistical@gmail.com</a>`,
+    },
+  ];
+
+  let current = 0;
+
+  const overlay    = document.getElementById('guideOverlay');
+  const mask       = document.getElementById('guideMask');
+  const spot       = document.getElementById('guideSpot');
+  const bubble     = document.getElementById('guideBubble');
+  const stepLabel  = document.getElementById('guideStepLabel');
+  const titleEl    = document.getElementById('guideTitle');
+  const descEl     = document.getElementById('guideDesc');
+  const fill       = document.getElementById('guideProgressFill');
+  const dotsWrap   = document.getElementById('guideDots');
+  const btnPrev    = document.getElementById('guidePrev');
+  const btnNext    = document.getElementById('guideNext');
+  const btnClose   = document.getElementById('guideCloseBtn');
+
+  // Crée les points indicateurs
+  function buildDots() {
+    dotsWrap.innerHTML = '';
+    STEPS.forEach((_, i) => {
+      const d = document.createElement('span');
+      d.className = 'guide-dot' + (i === current ? ' active' : '');
+      d.addEventListener('click', () => goTo(i));
+      dotsWrap.appendChild(d);
+    });
+  }
+
+  // Positionne le spotlight et la bulle autour de l'élément cible
+  function positionSpot(step) {
+    const ids = step.highlightIds || (step.targetId ? [step.targetId] : []);
+
+    if (!ids.length) {
+      spot.className = 'guide-no-target';
+      mask.className = 'guide-dim';
+      bubble.className = 'arrow-none';
+      // Centre la bulle
+      bubble.style.top  = '50%';
+      bubble.style.left = '50%';
+      bubble.style.transform = 'translate(-50%,-50%)';
+      return;
+    }
+    mask.className = '';
+
+    // Calcule le rect englobant tous les éléments ciblés
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      minX = Math.min(minX, r.left);
+      minY = Math.min(minY, r.top);
+      maxX = Math.max(maxX, r.right);
+      maxY = Math.max(maxY, r.bottom);
+    });
+
+    const PAD = 6;
+    spot.className = '';
+    spot.style.left   = (minX - PAD) + 'px';
+    spot.style.top    = (minY - PAD) + 'px';
+    spot.style.width  = (maxX - minX + PAD * 2) + 'px';
+    spot.style.height = (maxY - minY + PAD * 2) + 'px';
+
+    // Positionne la bulle
+    const bW = 370;
+    const spaceBelow = window.innerHeight - maxY - PAD;
+    const spaceAbove = minY - PAD;
+    const bubbleH    = 260; // estimation
+
+    bubble.style.transform = '';
+    bubble.style.width = Math.min(bW, window.innerWidth * 0.88) + 'px';
+
+    let bubTop, arrowClass;
+    if (spaceBelow >= bubbleH || spaceBelow >= spaceAbove) {
+      // En-dessous
+      bubTop = maxY + PAD + 14;
+      arrowClass = 'arrow-top';
+    } else {
+      // Au-dessus
+      bubTop = minY - PAD - bubbleH - 14;
+      arrowClass = 'arrow-bottom';
+    }
+
+    let bubLeft = minX - PAD;
+    const maxLeft = window.innerWidth - Math.min(bW, window.innerWidth * 0.88) - 8;
+    bubLeft = Math.max(8, Math.min(bubLeft, maxLeft));
+
+    bubble.style.top  = bubTop + 'px';
+    bubble.style.left = bubLeft + 'px';
+    bubble.className  = arrowClass;
+  }
+
+  function goTo(idx) {
+    current = Math.max(0, Math.min(idx, STEPS.length - 1));
+    const step = STEPS[current];
+
+    // Textes
+    stepLabel.textContent = `Étape ${current + 1} / ${STEPS.length}`;
+    titleEl.innerHTML     = step.title;
+    descEl.innerHTML      = step.desc;
+
+    // Barre de progression
+    fill.style.width = ((current + 1) / STEPS.length * 100) + '%';
+
+    // Dots
+    dotsWrap.querySelectorAll('.guide-dot').forEach((d, i) =>
+      d.classList.toggle('active', i === current)
+    );
+
+    // Boutons
+    btnPrev.disabled = current === 0;
+    btnNext.textContent = current === STEPS.length - 1 ? 'Terminer ✓' : 'Suivant →';
+
+    // Spotlight
+    positionSpot(step);
+  }
+
+  function open() {
+    current = 0;
+    buildDots();
+    overlay.classList.add('active');
+    goTo(0);
+  }
+
+  function close() {
+    overlay.classList.remove('active');
+    spot.className = 'guide-no-target';
+  }
+
+  btnNext.addEventListener('click', () => {
+    if (current >= STEPS.length - 1) close();
+    else goTo(current + 1);
+  });
+  btnPrev.addEventListener('click', () => goTo(current - 1));
+  btnClose.addEventListener('click', close);
+  mask.addEventListener('click', close);
+
+  // Recalcule position si la fenêtre est redimensionnée
+  window.addEventListener('resize', () => {
+    if (overlay.classList.contains('active')) goTo(current);
+  });
+
+  return { open, close };
+})();
+
+dom.openGuide.addEventListener('click', () => guide.open());
+
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener('load', () => fileManager.tryAutoRestore());
+window.addEventListener('beforeunload', e => {
+  const hasUnsaved = state.get('unsaved');
+  const hasIdbError = state.get('idbError');
+  if (hasUnsaved || hasIdbError) {
+    if (hasUnsaved) draftManager.flushNow().catch(() => {});
+    e.preventDefault();
+    e.returnValue = hasIdbError && !hasUnsaved
+      ? 'Sauvegarde automatique indisponible. Exportez vos données avant de partir.'
+      : 'Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter ?';
+  }
+});
+
+// ============================================================
+//  API CLIENT
+// ============================================================
+class ApiClient {
+  #baseUrl;
+
+  constructor() {
+    this.#baseUrl  = location.origin;
+  }
+
+  // ── En-têtes communs ───────────────────────────────────────
+  #headers() {
+    return {
+      "Content-Type": "application/json",
+      "userProfId": state.get('user_id'),
+    };
+  }
+
+  // ── Fetch avec retry ───────────────────────────────────────
+  async #safeFetch(url, options = {}, retries = 1) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (e) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 1000));
+        return this.#safeFetch(url, options, retries - 1);
+      }
+      throw e;
+    }
+  }
+
+  // ── Endpoints ──────────────────────────────────────────────
+  ping() {
+    return this.#baseUrl.startsWith('http') ? this.#safeFetch(`${this.#baseUrl}/ping`) : null;
+  }
+
+  login(user, password) {
+    return this.#safeFetch(`${this.#baseUrl}/login`, {
+      method: "POST",
+      headers: this.#headers(),
+      body: JSON.stringify({ user, password })
+    });
+  }
+
+  upload(changes) {
+    return this.#safeFetch(`${this.#baseUrl}/sync/upload`, {
+      method: "POST",
+      headers: this.#headers(),
+      body: JSON.stringify({ changes })
+    });
+  }
+
+  download() {
+    return this.#safeFetch(
+      `${this.#baseUrl}/sync/download`, { headers: this.#headers() }
+    );
+  }
+}
+
+// ============================================================
+//  SYNC MANAGER
+// ============================================================
+class SyncManager {
+  #api;
+  #auth;
+
+  constructor(api, auth) {
+    this.#api       = api;
+    this.#auth      = auth;
+  }
+
+  // ── Point d'entrée ─────────────────────────────────────────
+  async #ensureAuth(){
+    if (!await this.#auth.isLogged()){
+      throw new Error("Utilisateur non connecté");
+    }
+  }
+  async #buildData(){
+    const fields = CONFIG.exportFields;
+    const data = state.get('rowNotes').map(item => {
+      return fields.reduce((acc, col) => {
+        let val = item[col];
+        acc.push(val !== undefined && val !== null ? Number(val): null);
+        return acc;
+      }, []);
+    });
+
+    return data;
+  }
+
+  // ── Upload (pwa → serveur) ───────────────────────────────
+  async exportdt() {
+    await this.#ensureAuth();
+    const data = await this.#buildData();
+    if (!data) return;
+
+    const res = await this.#api.upload(data);
+    if (res?.success) {showToast('Export réussi vers la centrale','success');
+    } else {showToast('Erreur export vers la centrale','error');
+    }
+  }
+
+  // ── Download (serveur → pwa) ─────────────────────────────
+  async chargedt() {
+    await this.#ensureAuth();
+    if (state.get('unsaved')) {
+      const ok = await new Promise(resolve => {
+        const confirmed = window.confirm('Données locales non enregistrées. Les remplacer par les données du serveur ?');
+        resolve(confirmed);
+      });
+      if (!ok) return;
+    }
+    const res = await this.#api.download();
+
+    if (res.error?.length > 0) console.warn(res.error);
+    if (res.notes_mpr?.length > 0) {
+     await this.#applique_data(res);
+    }
+  }
+
+  // ── appliquer les donnees du serveur au pwa ──────────────────
+  async #applique_data(resp){
+    applyDataset(resp.notes_mpr, resp.matieres_mpr, resp.infos_mpr);
+    state.set('rowNotes', resp.notes_mpr);
+    await draftManager.flushNow();
+    dom.msgState.textContent = '✔ Données chargées';
+    showToast('Données chargées', 'success');
+  }
+}
+
+// ============================================================
+//  AUTH MANAGER
+// ============================================================
+class AuthManager {
+  #api;
+  #userId;
+
+  constructor(api) {
+    this.#api = api;
+  }
+
+  #getUser()  { return state.get('user_id'); }
+  async isLogged()  { return !!this.#getUser(); }
+
+  async login(user, password) {
+    const data = await this.#api.login(user, password);
+
+    if (!data.success) throw new Error("Login failed");
+
+    this.#userId = data.user_id;
+    state.set('user_id', this.#userId);
+    currentMeta = { ...currentMeta, forprof: data.user_nom };
+
+    showToast("Connexion réussie. Charger ou Exporter");
+    return data;
+  }
+
+  logout() {
+    state.set('user_id', null);
+  }
+}
+
+// ============================================================
+//  UI CONTROLLER
+// ============================================================
+class UIController {
+  #loginPage;
+  #btnNet;
+  #indicator;
+  #auth;
+  #sync;
+  #api;
+
+  constructor(auth, sync, api) {
+    this.#auth     = auth;
+    this.#sync     = sync;
+    this.#api      = api
+    this.#loginPage = document.getElementById("loginPage");
+    this.#btnNet = document.getElementById('netToggle');
+    this.#indicator = document.getElementById('netIndicator');
+    this.#bindEvents();
+  }
+
+  // ── Binding des événements ─────────────────────────────────
+  #bindEvents() {
+    this.#btnNet.addEventListener('click', async () => {
+      try {
+        const resp = await this.#api.ping();
+        if (!resp) throw new Error ();
+        this.#loginPage.classList.add("show");
+        this.#loginPage.querySelector(".closeg").onclick = () => this.#loginPage.classList.remove("show");
+        document.getElementById("loginBtn").onclick = async () => await this.#handleLogin();
+      } catch {
+        showToast("Serveur indisponible","warn");
+      }
+    });
+  }
+
+  async #handleLogin() {
+    const user = document.getElementById("userLogin").value;
+    const pass = document.getElementById("passLogin").value;
+    if (!user || !pass) {
+      showToast("Identifiant(s) vide(s)","warn");
+      return;
+    }
+
+    try {
+      await this.#auth.login(user, pass);
+      this.#loginPage.classList.remove("show");
+      this.#indicator.classList.add('active');
+    } catch {
+      showToast("Identifiants incorrects","warn");
+      this.#indicator.classList.remove('active');
+    }
+  }
+ }
+
+// ============================================================
+//  point d'entrée unique
+// ============================================================
+const main = (() => {
+  const api  = new ApiClient();
+  const auth = new AuthManager(api);
+  const sync  = new SyncManager( api, auth);
+  const ui    = new UIController(auth, sync, api);
+
+  return { api, auth, sync, ui };
+})();
+
+</script>
+</body>
+</html>
