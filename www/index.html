@@ -83,9 +83,9 @@
     align-items: center;
     justify-content: center;
     gap: .4rem;
-    min-width: 44px;
-    min-height: 44px;
-    padding: .5rem .7rem;
+    min-width: 35px;
+    min-height: 35px;
+    padding: .4rem .5rem;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.13);
     background: rgba(255,255,255,0.06);
@@ -177,7 +177,7 @@
   .toolbar {
     background: var(--toolbar-bg);
     border-bottom: 1px solid var(--border);
-    padding: .5rem .7rem;
+    padding: .4rem .6rem;
     display: flex;
     gap: .5rem;
     flex-wrap: wrap;
@@ -461,7 +461,7 @@
   /* Barre contexte élève */
   .np-ctx {
     display: flex; align-items: center; justify-content: space-between;
-    padding: .3rem .9rem .1rem;
+    padding: .3rem .7rem .1rem;
     border-bottom: 1px solid #f1f5f9;
     gap: .4rem;
   }
@@ -804,11 +804,11 @@
     <span class="txt">Charger</span>
   </button>
   <button id="saveBtn" class="hbtn" title="Enregistrer" aria-label="Enregistrer">
-    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.75H17a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7.5L8 3.75Z"/><path d="M9 3.75V8h6"/><circle cx="12" cy="14.25" r="2.25"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a1.5 1.5 0 0 1-2-2V5a1.5 1.5 0 0 1 2-2h11l5 5v11a1.5 1.5 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg></span>
     <span class="txt">Enregistrer</span>
   </button>
   <button id="exportBtn" class="hbtn" title="Exporter" aria-label="Exporter">
-    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16C5 9.5 9 5.5 15 5.5"/><path d="M12 3l3 2.5-3 2.5"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a1.5 1.5 0 0 0-2 2v12a1.5 1.5 0 0 0 2 2h12a1.5 1.5 0 0 0 2-2v-4"/><path d="M10 16c0-5 4-8 9-8"/><path d="M15 4l4 4-4 4"/></svg></span>
     <span class="txt">Exporter</span>
   </button>
   <div class="infosource">
@@ -831,7 +831,7 @@
 
 <!-- Toggle pill – anchored under header, slides with it -->
 <button id="toggleHeaderBtn" class="toggleheader" aria-label="Masquer l'entête" title="Masquer l'entête">
-  <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
+  <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
 </button>
 
 <main id="MainWrap">
@@ -1404,17 +1404,27 @@ class FileManager {
   async open() {
     try {
       const result = await CapPlugins.FilePicker.pickFiles({
-        types    : ['application/json'],
+        // application/octet-stream : sur Android 9 et antérieur (et certains
+        // gestionnaires de fichiers tiers), les .json sont rapportés avec ce
+        // type MIME générique au lieu d'application/json — sans ça, le
+        // sélecteur système exclut purement et simplement ces fichiers.
+        types    : ['application/json', 'application/octet-stream'],
         readData : true,       // renvoie le contenu en base64 directement
         multiple : false,
       });
       const picked = result?.files?.[0];
       if (!picked) return;
 
-      const text = atob(picked.data); // base64 → texte (JSON ASCII/UTF-8 simple)
+      // atob() seul renvoie une chaîne "binaire" (1 octet = 1 caractère) ;
+      // traiter ça comme du texte directement corrompt tous les accents
+      // UTF-8 multi-octets (ex. "Sétou" devient "SÃ©tou"). TextDecoder
+      // reconstitue correctement le texte à partir des octets décodés.
+      const bytes = Uint8Array.from(atob(picked.data), c => c.charCodeAt(0));
+      const text  = new TextDecoder('utf-8').decode(bytes);
       const fileShim = {
-        name : picked.name,
-        text : async () => text,
+        name     : picked.name,
+        mimeType : picked.mimeType,
+        text     : async () => text,
       };
 
       // Le fichier choisi devient la destination d'enregistrement suivante,
@@ -2107,7 +2117,13 @@ function applyDataset(parsedNotes, parsedMatieres, meta) {
 async function loadJSONDataset(file, hasWriteAccess = false) {
   try {
     if (!file) { showToast('Aucun fichier fourni', 'error'); return; }
-    if (!file.name?.toLowerCase().endsWith('.json')) { showToast('Fichier JSON requis', 'error'); return; }
+    const nameLooksJson = !!file.name?.toLowerCase().endsWith('.json');
+    // application/octet-stream est délibérément autorisé au niveau du sélecteur
+    // (voir FileManager.open) pour laisser passer les .json mal typés par
+    // Android 9 et antérieur — on doit donc aussi l'accepter ici, sinon le
+    // fichier franchit le filtre système pour se faire rejeter juste après.
+    const mimeLooksJson = ['application/json', 'text/json', 'application/octet-stream'].includes(file.mimeType);
+    if (!nameLooksJson && !mimeLooksJson) { showToast('Fichier JSON requis', 'error'); return; }
 
     const text   = await file.text();
     const parsed = parseAndValidateJSON(text);              // ✅ #6a
@@ -2796,8 +2812,8 @@ const guide = (() => {
   const ICO = {
     open   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12a1.5 1.5 0 0 0 1.06.44H19.5A1.5 1.5 0 0 1 21 9.5"/><path d="M3 7.5v9A1.5 1.5 0 0 0 4.5 18h13.44a1.5 1.5 0 0 0 1.45-1.11l1.88-6.9a1.2 1.2 0 0 0-1.16-1.5H6a1.5 1.5 0 0 0-1.45 1.11L3 15"/></svg>',
     view   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
-    save   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.75H17a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7.5L8 3.75Z"/><path d="M9 3.75V8h6"/><circle cx="12" cy="14.25" r="2.25"/></svg>',
-    export : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16C5 9.5 9 5.5 15 5.5"/><path d="M12 3l3 2.5-3 2.5"/></svg>',
+    save   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a1.5 1.5 0 0 1-2-2V5a1.5 1.5 0 0 1 2-2h11l5 5v11a1.5 1.5 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>',
+    export : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a1.5 1.5 0 0 0-2 2v12a1.5 1.5 0 0 0 2 2h12a1.5 1.5 0 0 0 2-2v-4"/><path d="M10 16c0-5 4-8 9-8"/><path d="M15 4l4 4-4 4"/></svg>',
     download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg>',
     server : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="6" rx="1.5"/><rect x="3.5" y="13.5" width="17" height="6" rx="1.5"/><circle cx="7" cy="7.5" r=".75" fill="currentColor" stroke="none"/><circle cx="7" cy="16.5" r=".75" fill="currentColor" stroke="none"/></svg>',
   };
@@ -2816,11 +2832,6 @@ const guide = (() => {
       desc     : 'Si vous êtes <strong>connecté au serveur</strong> (voir Connexion), charge directement les données depuis la base centrale.<br><br>Sinon, ouvre un fichier <strong>JSON</strong> exporté au préalable, contenant élèves, matières et notes existantes.',
     },
     {
-      targetId : 'toggleView',
-      title    : t(ICO.view, "Changer l'affichage"),
-      desc     : 'Basculez entre la <strong>vue tableau</strong> (desktop) et la <strong>vue cartes</strong> (mobile) selon votre préférence.<br><br>Sur mobile, la vue cartes est activée automatiquement.',
-    },
-    {
       targetId : 'saveBtn',
       title    : t(ICO.save, 'Enregistrer'),
       desc     : 'Sauvegarde les modifications directement dans le fichier de notes ouvert, sur l\'appareil.<br><br>Le fichier d\'origine est mis à jour, sans étape supplémentaire.',
@@ -2831,14 +2842,19 @@ const guide = (() => {
       desc     : 'Si vous êtes <strong>connecté au serveur</strong>, envoie directement les notes vers la base centrale.<br><br>Sinon, génère un fichier <strong>CSV</strong> et ouvre le partage natif (Drive, mail, WhatsApp...) pour l\'envoyer où vous voulez.',
     },
     {
-      targetId : 'expDownload',
-      title    : t(ICO.download, 'Télécharger'),
-      desc     : 'Copie le fichier <strong>CSV</strong> directement dans le dossier <strong>Téléchargements</strong> de l\'appareil, sans passer par le partage.<br><br>Pratique pour retrouver le fichier plus tard dans vos téléchargements.',
-    },
-    {
       targetId : 'netToggle',
       title    : t(ICO.server, 'Connexion Serveur'),
       desc     : 'Connectez-vous au <strong>serveur central</strong> pour charger ou envoyer les données en ligne.<br><br>Le voyant rouge 🔴 indique que vous êtes hors connexion ; vert 🟢 = connecté.',
+    },
+    {
+      targetId : 'toggleView',
+      title    : t(ICO.view, "Changer l'affichage"),
+      desc     : 'Basculez entre la <strong>vue tableau</strong> (desktop) et la <strong>vue cartes</strong> (mobile) selon votre préférence.<br><br>Sur mobile, la vue cartes est activée automatiquement.',
+    },
+    {
+      targetId : 'expDownload',
+      title    : t(ICO.download, 'Télécharger'),
+      desc     : 'Copie le fichier <strong>CSV</strong> directement dans le dossier <strong>Téléchargements</strong> de l\'appareil, sans passer par le partage.<br><br>Pratique pour retrouver le fichier plus tard dans vos téléchargements.',
     },
     {
       targetId : null,
@@ -2860,7 +2876,8 @@ const guide = (() => {
       title    : 'ℹ️ À propos',
       desc     : `<strong>Saisie de Notes</strong> — version <strong>v3</strong><br><br>
 Éditeur : <strong>Aklogistical</strong><br>
-Contact : <a href="mailto:aklogistical@gmail.com">aklogistical@gmail.com</a>`,
+Email : <a href="mailto:aklogistical@gmail.com">aklogistical@gmail.com</a><br>
+Contact(s): 75958191/71267760`,
     },
   ];
 
