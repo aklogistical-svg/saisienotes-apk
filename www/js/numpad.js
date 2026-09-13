@@ -55,7 +55,27 @@ const numpad = (() => {
       `input[data-field="${curField}"][data-id="${curRow[CONFIG.idField]}"]`
     );
     if (!input) return;
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // 1. Amène le champ dans la zone scrollable (tableau ou cartes), instantané.
+    input.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+
+    // 2. Le pavé numérique est fixé en bas de l'écran (position: fixed) et
+    // reste toujours affiché tant qu'il est ouvert — sa hauteur réelle
+    // (sheet.offsetHeight) n'est pas affectée par l'animation en cours,
+    // donc ce calcul est fiable même pendant la transition d'ouverture.
+    // Si le champ se retrouve quand même caché dessous, on scrolle le
+    // complément exact nécessaire pour le faire apparaître au-dessus.
+    const sheetTop = window.innerHeight - sheet.offsetHeight;
+    const rect     = input.getBoundingClientRect();
+    const padding  = 12; // marge visuelle au-dessus du pavé
+    const overlap  = rect.bottom - (sheetTop - padding);
+    if (overlap > 0) {
+      const scrollHost = input.closest('.cards-wrap, .table-wrap')
+        || document.scrollingElement
+        || document.documentElement;
+      scrollHost.scrollBy({ top: overlap, behavior: 'smooth' });
+    }
+
     input.classList.add('cell-fix-highlight');
   }
 
