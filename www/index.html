@@ -163,8 +163,15 @@
     <span class="closeg">&times;</span>
     <h3>Connexion au serveur</h3>
     <div class="cardlogin">
-      <input id="userLogin" type="text" placeholder="Nom d'utilisateur">
-      <input id="passLogin" type="password" placeholder="Mot de passe">
+      <label for="serverUrlInput">Adresse du serveur</label>
+      <input id="serverUrlInput" type="text" placeholder="192.168.1.50:8000" autocomplete="off">
+
+      <label for="userLogin">Nom d'utilisateur</label>
+      <input id="userLogin" type="text" placeholder="Nom d'utilisateur" autocomplete="username">
+
+      <label for="passLogin">Mot de passe</label>
+      <input id="passLogin" type="password" placeholder="Mot de passe" autocomplete="current-password">
+
       <button id="loginBtn">
         <span class="btn-text">🔑 Se connecter</span>
 

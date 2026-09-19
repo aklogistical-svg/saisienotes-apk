@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Autorise le trafic HTTP non chiffré (cleartext), bloqué par défaut par
+  Android depuis l'API 28. Nécessaire car le serveur école tourne en HTTP
+  simple sur le réseau local (pas de certificat SSL — inutile pour un
+  serveur interne joignable uniquement depuis le WiFi de l'établissement).
+
+  Portée volontairement large (tout le trafic sortant de l'app) plutôt que
+  restreinte à un domaine précis : l'adresse IP du serveur est découverte
+  dynamiquement (scan automatique ou saisie manuelle) et change d'une
+  école à l'autre, donc ne peut pas être connue à l'avance dans ce fichier.
+  Cette app ne fait de requêtes qu'à ce serveur — pas de navigateur, pas
+  de contenu tiers — ce qui limite le risque réel de cette permission.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

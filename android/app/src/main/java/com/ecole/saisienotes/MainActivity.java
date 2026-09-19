@@ -19,6 +19,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Enregistrement des plugins natifs custom (doit précéder super.onCreate())
         registerPlugin(DownloadsSaverPlugin.class);
+        registerPlugin(WifiInfoPlugin.class);
 
         // Doit être appelé AVANT super.onCreate() : active l'API officielle
         // Android 12+ SplashScreen (voir styles.xml AppTheme.NoActionBarLaunch).

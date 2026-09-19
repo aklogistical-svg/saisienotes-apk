@@ -11,4 +11,9 @@ import { Share } from '@capacitor/share';
 // écriture directe + permission WRITE_EXTERNAL_STORAGE sur Android 9 et moins).
 const DownloadsSaver = registerPlugin('DownloadsSaver');
 
-window.CapPlugins = { Filesystem, Directory, Encoding, Haptics, ImpactStyle, FilePicker, Share, DownloadsSaver };
+// Plugin natif custom (voir android/.../WifiInfoPlugin.java) : lit l'IP
+// locale du téléphone sur le WiFi, pour la découverte automatique du
+// serveur école (voir ServerDiscovery dans sync.js).
+const WifiInfo = registerPlugin('WifiInfo');
+
+window.CapPlugins = { Filesystem, Directory, Encoding, Haptics, ImpactStyle, FilePicker, Share, DownloadsSaver, WifiInfo };
