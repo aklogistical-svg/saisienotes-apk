@@ -297,6 +297,10 @@ class AuthManager {
     state.set('token', data.token);
     currentMeta = { ...currentMeta, forprof: data.user_nom };
 
+    // Nom d'utilisateur mémorisé (jamais le mot de passe) pour préremplir
+    // l'écran de connexion la prochaine fois — seulement si non vide.
+    if (user) localStorage.setItem('last_username', user);
+
     showToast("Connexion réussie. Charger ou Exporter");
     return data;
   }
@@ -342,6 +346,9 @@ class UIController {
       // Repli : le champ reste modifiable (préempli si trouvé/déjà connu,
       // vide sinon) — le prof peut toujours corriger à la main.
       document.getElementById("serverUrlInput").value = this.#api.getBaseUrl();
+      // Nom d'utilisateur mémorisé depuis la dernière connexion réussie.
+      const lastUser = localStorage.getItem('last_username');
+      if (lastUser) document.getElementById("userLogin").value = lastUser;
       this.#loginPage.classList.add("show");
       this.#loginPage.querySelector(".closeg").onclick = () => this.#loginPage.classList.remove("show");
       document.getElementById("loginBtn").onclick = async () => await this.#handleLogin();

@@ -93,7 +93,9 @@ function render() {
   const filtered = state.get('filtered');
 
   if (!headers.length || !filtered.length) {
-    dom.theadtab.innerHTML = dom.tbodytab.innerHTML = dom.cardstab.innerHTML = '';
+    dom.theadtab.innerHTML = '';
+    dom.tbodytab.innerHTML = `<tr><td colspan="100" class="empty-hint">Sélectionnez une classe et une matière pour afficher les notes.</td></tr>`;
+    dom.cardstab.innerHTML = `<div class="empty-hint">Sélectionnez une classe et une matière pour afficher les notes.</div>`;
     return;
   }
   state.get('currentView') === 'table'

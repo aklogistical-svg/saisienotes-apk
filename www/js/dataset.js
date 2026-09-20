@@ -174,7 +174,12 @@ function populateMatieres(selectedClasse = '') {
 function applyFilters() {
   const matSel = dom.fMatiereSel.value;
   const clsSel = dom.fClasseSel.value;
-  if (!matSel) {
+  // ⚠ Avant correction : seule la matière était obligatoire — une classe
+  // vide affichait TOUS les élèves de toutes les classes pour la matière
+  // choisie, laissant des champs de saisie actifs (y compris la coche
+  // "exempter") sans contexte classe/matière fiable. Les deux sont
+  // désormais obligatoires ensemble, sinon la vue reste vide.
+  if (!matSel || !clsSel) {
     state.set('filtered', []);
     dom.effectif.textContent = 'Effectif : 0';
     render();
@@ -182,7 +187,7 @@ function applyFilters() {
   }
   const filtered = state.get('rowNotes').filter(r =>
     String(r.idmatiere ?? '') === String(matSel) &&
-    (!clsSel || String(r.fkclasse ?? '') === String(clsSel))
+    String(r.fkclasse ?? '') === String(clsSel)
   );
   state.set('filtered', filtered);
   dom.effectif.textContent = `Effectif : ${filtered.length}`;

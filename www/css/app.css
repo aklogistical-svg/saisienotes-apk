@@ -710,6 +710,7 @@
   /* ── LOGIN CARD ──────────────────────────────────────── */
   .cardlogin { display: flex; flex-direction: column; gap: .6rem; margin-top: .5rem; }
   .cardlogin label { font-size: .82rem; color: var(--text-dim, #9aa); margin-bottom: -.35rem; }
+  .empty-hint { text-align: center; padding: 2.2rem 1rem; color: var(--text-dim, #9aa); font-size: .9rem; }
   .cardlogin input {
     padding: .6rem .8rem; border-radius: var(--radius-sm);
     border: 1px solid #e2e8f0; font-family: inherit; font-size: .88rem;

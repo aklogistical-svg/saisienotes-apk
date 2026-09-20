@@ -254,7 +254,27 @@ class ExportManager {
     }
     if (!validateAllNotes()) { return; }
     showOverlay('Exportation en cours…');
-    if (state.get('user_id')) { await main.sync.exportdt(); hideOverlay(); return; }
+    if (state.get('user_id')) {
+      // ⚠ Avant correction : si exportdt() levait une exception (erreur
+      // serveur autre que 401 — 500, timeout, etc.), hideOverlay() n'était
+      // jamais atteint, laissant la fenêtre d'attente bloquée sans aucun
+      // message d'erreur visible pour le prof.
+      try {
+        await main.sync.exportdt();
+      } catch (err) {
+        logger.error('Export serveur error', err);
+        showErrorToast({
+          title  : 'Erreur lors de l\'export vers le serveur',
+          detail : err?.message ?? '',
+          actions: [
+            { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.export() },
+          ],
+        });
+      } finally {
+        hideOverlay();
+      }
+      return;
+    }
 
     try {
       const blob       = this.#buildBlob();
