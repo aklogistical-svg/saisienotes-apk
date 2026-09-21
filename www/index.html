@@ -164,7 +164,13 @@
     <h3>Connexion au serveur</h3>
     <div class="cardlogin">
       <label for="serverUrlInput">Adresse du serveur</label>
-      <input id="serverUrlInput" type="text" placeholder="192.168.1.50:8000" autocomplete="off">
+      <div class="url-row">
+        <input id="serverUrlInput" type="text" inputmode="url" placeholder="192.168.1.50:8000" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="rescanBtn" type="button" class="rescan-btn" title="Rechercher le serveur" aria-label="Rechercher le serveur">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+        </button>
+      </div>
+      <div id="serverStatus" class="server-status" role="status" aria-live="polite"></div>
 
       <label for="userLogin">Nom d'utilisateur</label>
       <input id="userLogin" type="text" placeholder="Nom d'utilisateur" autocomplete="username">
@@ -176,6 +182,11 @@
         <span class="btn-text">🔑 Se connecter</span>
 
       </button>
+
+      <details class="net-diag">
+        <summary>Diagnostic réseau</summary>
+        <pre id="netDiag">Aucune recherche effectuée.</pre>
+      </details>
     </div>
   </div>
 </div>

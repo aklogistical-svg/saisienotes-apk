@@ -140,10 +140,16 @@ function fillFilters() {
   populateMatieres();
 }
 
+// ⚠ Toute remise à zéro de la matière doit AUSSI vider l'affichage : avant,
+// on changeait de classe (ou on rechargeait un fichier / les données du
+// serveur) sans re-rendre — l'ancien tableau restait à l'écran, saisissable,
+// alors que la matière indiquait « — Choisir — ». D'où l'appel à
+// applyFilters() sur chaque sortie de cette fonction.
 function populateMatieres(selectedClasse = '') {
   if (!selectedClasse) {
     dom.fMatiereSel.innerHTML = '<option value="" disabled selected>— Choisir —</option>';
     state.set('isOptionMat', false);
+    applyFilters();
     return;
   }
   const list = state.get('rowMatieres')
@@ -168,7 +174,7 @@ function populateMatieres(selectedClasse = '') {
 
   dom.fMatiereSel.value = '';
   state.set('isOptionMat', false);
-  state.set('filtered', []);
+  applyFilters();   // matière vide → tableau/cartes vidés + message
 }
 
 function applyFilters() {
@@ -181,7 +187,7 @@ function applyFilters() {
   // désormais obligatoires ensemble, sinon la vue reste vide.
   if (!matSel || !clsSel) {
     state.set('filtered', []);
-    dom.effectif.textContent = 'Effectif : 0';
+    dom.effectif.textContent = state.get('rowNotes').length ? 'Effectif : 0' : '';
     render();
     return;
   }

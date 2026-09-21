@@ -17,77 +17,230 @@ window.addEventListener('beforeunload', e => {
 });
 
 // ============================================================
+//  COUCHE RÉSEAU
+// ============================================================
+// Toutes les requêtes vers le serveur école passent par netRequest().
+//
+// Deux problèmes réglés ici :
+//
+// 1. CORS. Dans l'APK, la WebView a pour origine "http://localhost" ; un
+//    fetch() vers http://192.168.x.x:8000 est donc une requête cross-origin
+//    que le serveur doit autoriser explicitement, sinon la réponse est
+//    silencieusement bloquée (et la découverte concluait "rien trouvé").
+//    On passe par le client HTTP natif de Capacitor (HttpURLConnection),
+//    qui n'est pas soumis à CORS. En navigateur (PWA servie par le
+//    serveur lui-même) on retombe sur fetch().
+//
+// 2. Délais. Un fetch() sans timeout sur une adresse morte peut rester
+//    suspendu très longtemps dans une WebView : la fenêtre d'attente ou
+//    l'écran de connexion restaient figés. Chaque requête a maintenant un
+//    délai maximum, appliqué nativement ET doublé d'un filet de sécurité
+//    côté JS.
+
+class NetError extends Error {
+  // kind : 'timeout' | 'network' | 'config'
+  constructor(kind, message) {
+    super(message);
+    this.name = 'NetError';
+    this.kind = kind;
+  }
+}
+
+// Message lisible pour le prof, quelle que soit l'origine de l'erreur.
+function describeNetError(e) {
+  if (!e) return 'Erreur inconnue.';
+  if (e.status) return e.message || `Erreur serveur (HTTP ${e.status}).`;
+  if (e.kind === 'timeout') return 'Le serveur ne répond pas (délai dépassé). Vérifiez le WiFi et que le serveur est allumé.';
+  if (e.kind === 'network') return 'Serveur injoignable. Vérifiez le WiFi et l\'adresse du serveur.';
+  if (e.kind === 'config')  return e.message;
+  return e.message || 'Erreur inconnue.';
+}
+
+// Lie le trafic de l'app au WiFi (sans effet hors Android). Voir
+// WifiInfoPlugin.bindToWifi : sans ça, un WiFi sans Internet est
+// contourné par Android au profit des données mobiles.
+async function bindWifi() {
+  try { return await window.CapPlugins?.WifiInfo?.bindToWifi?.(); }
+  catch { return null; }
+}
+
+function parseMaybeJson(data) {
+  if (typeof data !== 'string') return data;
+  try { return JSON.parse(data); } catch { return data; }
+}
+
+async function netRequest(url, { method = 'GET', headers = {}, body, timeoutMs = 10000 } = {}) {
+  const http = window.CapPlugins?.Http;
+  let timer;
+  const guard = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new NetError('timeout', 'Délai dépassé')),
+      timeoutMs + 2000                      // marge : le natif doit échouer en premier
+    );
+  });
+
+  const work = http
+    ? (async () => {
+        try {
+          const res = await http.request({
+            url, method, headers, data: body,
+            connectTimeout: Math.min(timeoutMs, 8000),
+            readTimeout   : timeoutMs,
+          });
+          return { status: res.status, data: parseMaybeJson(res.data) };
+        } catch (e) {
+          const msg = String(e?.message || e || '').toLowerCase();
+          throw new NetError(/timed? ?out|timeout/.test(msg) ? 'timeout' : 'network', e?.message || 'Erreur réseau');
+        }
+      })()
+    : (async () => {
+        const ctrl = new AbortController();
+        const abortTimer = setTimeout(() => ctrl.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, {
+            method, signal: ctrl.signal,
+            headers,
+            body: body === undefined ? undefined : JSON.stringify(body),
+          });
+          const text = await res.text();
+          return { status: res.status, data: parseMaybeJson(text) };
+        } catch (e) {
+          throw new NetError(e?.name === 'AbortError' ? 'timeout' : 'network', e?.message || 'Erreur réseau');
+        } finally {
+          clearTimeout(abortTimer);
+        }
+      })();
+
+  try {
+    return await Promise.race([work, guard]);
+  } finally {
+    clearTimeout(timer);
+    work.catch(() => {});                   // évite un "unhandled rejection" si le garde a gagné
+  }
+}
+
+// Extrait le message d'erreur renvoyé par FastAPI ({"detail": "..."} ou liste 422).
+function httpErrorFrom(status, data) {
+  let detail = null;
+  if (data && typeof data === 'object') {
+    if (typeof data.detail === 'string') detail = data.detail;
+    else if (Array.isArray(data.detail) && data.detail[0]?.msg) detail = data.detail[0].msg;
+  }
+  const err = new Error(detail || `Erreur serveur (HTTP ${status})`);
+  err.status = status;
+  return err;
+}
+
+// ============================================================
 //  DÉCOUVERTE AUTOMATIQUE DU SERVEUR SUR LE RÉSEAU LOCAL
 // ============================================================
-// Principe : le téléphone lit sa propre IP WiFi (plugin natif WifiInfo,
-// voir android/.../WifiInfoPlugin.java), en déduit le sous-réseau
-// (ex: "192.168.1"), puis teste chaque adresse candidate via /whoami —
-// un endpoint léger qui confirme qu'il s'agit bien DU serveur école (pas
-// un autre appareil qui répondrait par hasard sur le même port).
+// Ordre des tentatives (la première qui répond gagne) :
+//   1. l'adresse déjà connue (instantané si elle marche encore) ;
+//   2. l'origine de la page si l'app est servie par le serveur (PWA) ;
+//   3. un scan NATIF du réseau (WifiInfoPlugin.scan) : masque réel du
+//      réseau, points d'accès/USB inclus, hôtes testés en parallèle.
 //
-// Pas de mDNS/Zeroconf tiers : écosystème de plugins Capacitor fragmenté
-// et souvent abandonné, et risque réel que le WiFi de l'école bloque le
-// trafic multicast. Pas de WebRTC pour deviner l'IP locale non plus :
-// Chrome/Android masque volontairement cette IP depuis 2020 (mDNS
-// obfuscation anti-fingerprinting), cette astuce ne fonctionne plus de
-// façon fiable sur les navigateurs/WebView récents.
+// Chaque candidat est vérifié via /whoami : on ne retient que le vrai
+// serveur école, jamais un autre appareil qui répondrait sur le port 8000.
+//
+// Pas de mDNS : trop dépendant du WiFi de l'école (le multicast y est
+// souvent filtré) et de plugins tiers peu maintenus.
 const ServerDiscovery = (() => {
   const PORT = 8000;
   const EXPECTED_SERVICE = 'adminschool-platform_api';
-  const SCAN_TIMEOUT_MS = 800;
-  const CONCURRENCY = 24;
+  const PROBE_TIMEOUT_MS = 1500;
+
+  let seq = 0;                               // invalide les découvertes obsolètes
 
   async function isOurServer(baseUrl) {
     if (!baseUrl) return false;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), SCAN_TIMEOUT_MS);
     try {
-      const res = await fetch(`${baseUrl}/whoami`, { signal: ctrl.signal });
-      if (!res.ok) return false;
-      const data = await res.json();
-      return data.service === EXPECTED_SERVICE;
+      const { status, data } = await netRequest(`${baseUrl}/whoami`, { timeoutMs: PROBE_TIMEOUT_MS });
+      return status === 200 && data?.service === EXPECTED_SERVICE;
     } catch {
       return false;
-    } finally {
-      clearTimeout(timer);
     }
   }
 
-  async function guessLocalSubnetPrefix() {
+  function hostOf(url) {
+    try { return new URL(url).hostname; } catch { return ''; }
+  }
+
+  function cancel() {
+    seq++;
+    try { window.CapPlugins?.WifiInfo?.cancelScan?.(); } catch { /* ignore */ }
+  }
+
+  // Résultat : { url, source, cancelled, message, diag }
+  async function discover({ savedUrl = '', skipSaved = false, onStatus = () => {} } = {}) {
+    const id = ++seq;
+    const stale = () => id !== seq;
+    const diag = [];
+    const finish = (extra) => ({ url: null, source: null, cancelled: false, message: '', ...extra, diag: diag.join('\n') });
+
+    const bind = await bindWifi();
+    if (bind) diag.push(`Liaison WiFi : ${bind.bound ? 'oui' : 'non'}${bind.reason ? ` (${bind.reason})` : ''}`);
+
+    // 1. adresse mémorisée
+    if (savedUrl && !skipSaved) {
+      onStatus('Test de l\'adresse mémorisée…');
+      const ok = await isOurServer(savedUrl);
+      diag.push(`Adresse mémorisée ${savedUrl} : ${ok ? 'répond' : 'ne répond pas'}`);
+      if (stale()) return finish({ cancelled: true });
+      if (ok) return finish({ url: savedUrl, source: 'saved' });
+    }
+
+    // 2. app servie par le serveur lui-même (PWA dans un navigateur)
+    const origin = location.origin;
+    if (/^https?:/.test(origin) && !/^https?:\/\/localhost(:|$)/.test(origin) && await isOurServer(origin)) {
+      diag.push(`Origine de la page ${origin} : répond`);
+      return finish({ url: origin, source: 'origin' });
+    }
+
+    // 3. scan natif
+    const wifi = window.CapPlugins?.WifiInfo;
+    if (!wifi?.scan) {
+      diag.push('Scan réseau indisponible (pas dans l\'APK).');
+      return finish({ message: 'Recherche automatique indisponible ici — saisissez l\'adresse du serveur.' });
+    }
+
+    onStatus('Recherche du serveur sur le réseau…');
+    let listener = null;
     try {
-      const { ip } = await window.CapPlugins.WifiInfo.getLocalIp();
-      const parts = (ip || '').split('.');
-      return parts.length === 4 ? parts.slice(0, 3).join('.') : null;
-    } catch {
-      return null; // WiFi coupé, pas sur Capacitor, permission refusée, etc.
+      listener = await wifi.addListener('scanProgress', p => {
+        if (!stale()) onStatus(`Recherche du serveur… ${p.done}/${p.total}`);
+      });
+    } catch { /* la progression est facultative */ }
+
+    let res;
+    try {
+      res = await wifi.scan({
+        port: PORT, path: '/whoami', service: EXPECTED_SERVICE,
+        hintHost: hostOf(savedUrl),
+      });
+    } catch (e) {
+      diag.push(`Scan en erreur : ${e?.message || e}`);
+      return finish({ message: 'Impossible de scanner le réseau. Saisissez l\'adresse du serveur.' });
+    } finally {
+      try { await listener?.remove(); } catch { /* ignore */ }
     }
+
+    if (res.phoneIp) diag.push(`Téléphone : ${res.phoneIp}/${res.prefix}${res.gateway ? ` (passerelle ${res.gateway})` : ''}`);
+    diag.push(`Sous-réseaux balayés : ${(res.subnets || []).join(', ') || 'aucun'}`);
+    diag.push(`Adresses testées : ${res.scanned}/${res.total} en ${((res.elapsedMs || 0) / 1000).toFixed(1)} s`);
+    diag.push(`Résultat : ${res.url || res.reason}`);
+    if (stale()) return finish({ cancelled: true });
+
+    if (res.url) return finish({ url: res.url, source: 'scan' });
+
+    const message =
+      res.reason === 'no_network'
+        ? 'WiFi non détecté — connectez le téléphone au WiFi de l\'école, puis relancez la recherche.'
+        : 'Serveur non trouvé sur ce réseau. Vérifiez qu\'il est allumé et sur le même WiFi, ou saisissez son adresse.';
+    return finish({ message });
   }
 
-  async function scanSubnet(prefix) {
-    for (let start = 1; start <= 254; start += CONCURRENCY) {
-      const batch = [];
-      for (let n = start; n < start + CONCURRENCY && n <= 254; n++) {
-        const url = `http://${prefix}.${n}:${PORT}`;
-        batch.push(isOurServer(url).then(ok => ok ? url : null));
-      }
-      const found = (await Promise.all(batch)).find(Boolean);
-      if (found) return found;
-    }
-    return null;
-  }
-
-  // Point d'entrée : réessaie d'abord l'adresse déjà connue (instantané
-  // si elle marche encore), sinon relance un scan complet du réseau.
-  async function discover(savedUrl) {
-    if (await isOurServer(savedUrl)) return savedUrl;
-
-    const prefix = await guessLocalSubnetPrefix();
-    if (!prefix) return null;
-
-    return scanSubnet(prefix);
-  }
-
-  return { discover };
+  return { discover, cancel, isOurServer };
 })();
 
 // ============================================================
@@ -98,87 +251,100 @@ class ApiClient {
 
   constructor() {
     // ⚠ Dans l'APK packagé (Capacitor), location.origin vaut toujours
-    // "https://localhost" (l'origine interne de la WebView), jamais
-    // l'adresse réseau du serveur école — la sync ne pouvait donc
-    // techniquement jamais fonctionner. L'adresse est maintenant saisie
-    // une fois par le prof (écran de connexion) et persistée sur
-    // l'appareil (localStorage, propre au téléphone, jamais partagée).
-    this.#baseUrl = localStorage.getItem('server_url') || '';
+    // "http://localhost" (l'origine interne de la WebView), jamais
+    // l'adresse réseau du serveur école : l'adresse est donc mémorisée
+    // sur l'appareil après une connexion réussie (ou une découverte
+    // vérifiée par /whoami), jamais avant.
+    this.#baseUrl = this.#readStored();
+  }
+
+  #readStored() {
+    try { return localStorage.getItem('server_url') || ''; } catch { return ''; }
   }
 
   getBaseUrl() {
     return this.#baseUrl;
   }
 
-  // Normalise ("192.168.1.50:8000" → "http://192.168.1.50:8000") et
-  // enlève un éventuel "/" final avant de sauvegarder.
-  setBaseUrl(url) {
-    let clean = (url || '').trim().replace(/\/+$/, '');
-    if (clean && !/^https?:\/\//i.test(clean)) clean = `http://${clean}`;
-    this.#baseUrl = clean;
-    localStorage.setItem('server_url', clean);
-    return clean;
-  }
-
-  // ── En-têtes communs ───────────────────────────────────────
-  // Le token JWT (reçu au login) est ajouté automatiquement dès qu'il
-  // existe — /login n'en a pas besoin, /sync/upload et /sync/download si.
-  #headers() {
-    const headers = { "Content-Type": "application/json" };
-    const token = state.get('token');
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  }
-
-  // ── Fetch avec retry ───────────────────────────────────────
-  // Un 401 (session expirée/absente) ne doit jamais être relancé : ça ne
-  // réussira pas sans reconnexion, autant échouer tout de suite plutôt
-  // que perdre une seconde sur une tentative vouée à échouer.
-  async #safeFetch(url, options = {}, retries = 1) {
+  // "192.168.1.50" → "http://192.168.1.50:8000" ; enlève chemin et "/" final
+  // (ex. l'utilisateur colle l'adresse de la PWA "http://ip:8000/app/").
+  static normalize(url) {
+    let clean = (url || '').trim();
+    if (!clean) return '';
+    const explicitScheme = /^https?:\/\//i.test(clean);
+    if (!explicitScheme) clean = `http://${clean}`;
     try {
-      const res = await fetch(url, options);
-      if (res.status === 401) {
-        const err = new Error('HTTP 401');
-        err.status = 401;
-        throw err;
+      const u = new URL(clean);
+      if (!u.port && !explicitScheme) u.port = '8000';
+      return u.origin;
+    } catch {
+      return clean.replace(/\/+$/, '');
+    }
+  }
+
+  // persist=false : adresse saisie à la main, pas encore validée.
+  setBaseUrl(url, { persist = true } = {}) {
+    this.#baseUrl = ApiClient.normalize(url);
+    if (persist) this.persistBaseUrl();
+    return this.#baseUrl;
+  }
+
+  persistBaseUrl() {
+    try { localStorage.setItem('server_url', this.#baseUrl); } catch { /* stockage indisponible */ }
+  }
+
+  // ── Requête générique ──────────────────────────────────────
+  // Le token JWT (reçu au login) est ajouté dès qu'il existe.
+  // Un 401 n'est jamais relancé (il faut se reconnecter). Les POST ne sont
+  // jamais relancés automatiquement : un envoi de notes ne doit pas partir
+  // deux fois pendant que le prof attend. Seuls les GET (retries > 0)
+  // sont réessayés, et seulement sur erreur réseau/timeout/5xx.
+  async #request(path, { method = 'GET', body, timeoutMs = 10000, auth = true, retries = 0 } = {}) {
+    if (!this.#baseUrl) throw new NetError('config', 'Adresse du serveur non renseignée.');
+    await bindWifi();
+
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const token = state.get('token');
+    if (auth && token) headers['Authorization'] = `Bearer ${token}`;
+
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const { status, data } = await netRequest(`${this.#baseUrl}${path}`, { method, headers, body, timeoutMs });
+        if (status >= 200 && status < 300) return data;
+        throw httpErrorFrom(status, data);
+      } catch (e) {
+        // Pas de nouvel essai après un timeout : ce serait doubler l'attente du prof.
+        const retryable = e.kind !== 'timeout' && (!e.status || e.status >= 500);
+        if (e.status === 401 || !retryable || attempt >= retries) throw e;
+        await new Promise(r => setTimeout(r, 800));
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    } catch (e) {
-      if (e.status === 401) throw e;
-      if (retries > 0) {
-        await new Promise(r => setTimeout(r, 1000));
-        return this.#safeFetch(url, options, retries - 1);
-      }
-      throw e;
     }
   }
 
   // ── Endpoints ──────────────────────────────────────────────
-  ping() {
-    return this.#baseUrl.startsWith('http') ? this.#safeFetch(`${this.#baseUrl}/ping`) : null;
+  async ping() {
+    const data = await this.#request('/ping', { timeoutMs: 4000, auth: false });
+    return data?.status === 'ok';
   }
 
   login(user, password) {
-    return this.#safeFetch(`${this.#baseUrl}/login`, {
-      method: "POST",
-      headers: this.#headers(),
-      body: JSON.stringify({ user, password })
+    return this.#request('/login', {
+      method: 'POST', body: { user, password }, timeoutMs: 10000, auth: false,
     });
   }
 
+  // Le serveur attend jusqu'à 60 s la fin d'écriture dans Access avant de
+  // répondre 504 : le délai client doit être plus long pour que le prof
+  // reçoive ce message plutôt qu'un simple "délai dépassé".
   upload(changes) {
-    return this.#safeFetch(`${this.#baseUrl}/sync/upload`, {
-      method: "POST",
-      headers: this.#headers(),
-      body: JSON.stringify({ changes })
+    return this.#request('/sync/upload', {
+      method: 'POST', body: { changes }, timeoutMs: 75000,
     });
   }
 
   download() {
-    return this.#safeFetch(
-      `${this.#baseUrl}/sync/download`, { headers: this.#headers() }
-    );
+    return this.#request('/sync/download', { timeoutMs: 30000, retries: 1 });
   }
 }
 
@@ -214,18 +380,23 @@ class SyncManager {
   }
 
   // ── Upload (pwa → serveur) ───────────────────────────────
+  // Lève une erreur dans tous les cas d'échec (réseau, timeout, HTTP,
+  // refus d'écriture côté serveur) : l'appelant (ExportManager.export)
+  // ferme la fenêtre d'attente et affiche l'erreur avec "Réessayer".
+  // Retourne false uniquement si la session a expiré (déjà signalé).
   async exportdt() {
     await this.#ensureAuth();
     const data = await this.#buildData();
-    if (!data) return;
 
     try {
       const res = await this.#api.upload(data);
-      if (res?.success) { showToast('Export réussi vers la centrale', 'success');
-      } else { showToast('Erreur export vers la centrale', 'error');
+      if (!res?.success) {
+        throw new Error('Le serveur n\'a pas pu enregistrer les notes dans la base. Réessayez ; si l\'erreur persiste, vérifiez le serveur.');
       }
+      showToast('Export réussi vers la centrale', 'success');
+      return true;
     } catch (e) {
-      if (e.status === 401) { this.#handleSessionExpired(); return; }
+      if (e.status === 401) { this.#handleSessionExpired(); return false; }
       throw e;
     }
   }
@@ -241,17 +412,20 @@ class SyncManager {
       if (!ok) return;
     }
 
-    let res;
+    showOverlay('Chargement des données…');
     try {
-      res = await this.#api.download();
+      const res = await this.#api.download();
+      if (res.error?.length > 0) console.warn(res.error);
+      if (res.notes_mpr?.length > 0) {
+        await this.#applique_data(res);
+      } else {
+        showToast('Le serveur n\'a renvoyé aucune note', 'warn', 4000);
+      }
     } catch (e) {
       if (e.status === 401) { this.#handleSessionExpired(); return; }
       throw e;
-    }
-
-    if (res.error?.length > 0) console.warn(res.error);
-    if (res.notes_mpr?.length > 0) {
-     await this.#applique_data(res);
+    } finally {
+      hideOverlay();
     }
   }
 
@@ -290,7 +464,11 @@ class AuthManager {
   async login(user, password) {
     const data = await this.#api.login(user, password);
 
-    if (!data.success) throw new Error("Login failed");
+    if (!data?.success) {
+      const err = new Error('Identifiants incorrects.');
+      err.status = 401;
+      throw err;
+    }
 
     this.#userId = data.user_id;
     state.set('user_id', this.#userId);
@@ -298,8 +476,11 @@ class AuthManager {
     currentMeta = { ...currentMeta, forprof: data.user_nom };
 
     // Nom d'utilisateur mémorisé (jamais le mot de passe) pour préremplir
-    // l'écran de connexion la prochaine fois — seulement si non vide.
-    if (user) localStorage.setItem('last_username', user);
+    // l'écran de connexion la prochaine fois — seulement s'il n'est pas vide.
+    const clean = (user || '').trim();
+    if (clean) {
+      try { localStorage.setItem('last_username', clean); } catch { /* stockage indisponible */ }
+    }
 
     showToast("Connexion réussie. Charger ou Exporter");
     return data;
@@ -308,6 +489,7 @@ class AuthManager {
   logout() {
     state.set('user_id', null);
     state.set('token', null);
+    window.dispatchEvent(new CustomEvent('auth:logout'));
   }
 }
 
@@ -322,69 +504,208 @@ class UIController {
   #sync;
   #api;
 
+  #urlInput;
+  #userInput;
+  #passInput;
+  #loginBtn;
+  #rescanBtn;
+  #statusEl;
+  #diagEl;
+
+  #urlDirty    = false;   // l'utilisateur a modifié l'adresse à la main
+  #busy        = false;   // connexion en cours
+  #discovering = false;   // recherche du serveur en cours
+  #runId       = 0;       // identifie la recherche la plus récente (voir #runDiscovery)
+
   constructor(auth, sync, api) {
-    this.#auth     = auth;
-    this.#sync     = sync;
-    this.#api      = api
+    this.#auth      = auth;
+    this.#sync      = sync;
+    this.#api       = api;
     this.#loginPage = document.getElementById("loginPage");
-    this.#btnNet = document.getElementById('netToggle');
+    this.#btnNet    = document.getElementById('netToggle');
     this.#indicator = document.getElementById('netIndicator');
+    this.#urlInput  = document.getElementById("serverUrlInput");
+    this.#userInput = document.getElementById("userLogin");
+    this.#passInput = document.getElementById("passLogin");
+    this.#loginBtn  = document.getElementById("loginBtn");
+    this.#rescanBtn = document.getElementById("rescanBtn");
+    this.#statusEl  = document.getElementById("serverStatus");
+    this.#diagEl    = document.getElementById("netDiag");
     this.#bindEvents();
   }
 
-  // ── Binding des événements ─────────────────────────────────
+  // ── Binding des événements (une seule fois) ────────────────
   #bindEvents() {
-    this.#btnNet.addEventListener('click', async () => {
-      showToast("Recherche du serveur sur le réseau...", "info");
-      const found = await ServerDiscovery.discover(this.#api.getBaseUrl());
-      if (found) {
-        this.#api.setBaseUrl(found);
-        showToast("Serveur trouvé automatiquement", "success");
-      } else if (!this.#api.getBaseUrl()) {
-        showToast("Serveur non trouvé — indiquez son adresse manuellement", "warn");
-      }
-      // Repli : le champ reste modifiable (préempli si trouvé/déjà connu,
-      // vide sinon) — le prof peut toujours corriger à la main.
-      document.getElementById("serverUrlInput").value = this.#api.getBaseUrl();
-      // Nom d'utilisateur mémorisé depuis la dernière connexion réussie.
-      const lastUser = localStorage.getItem('last_username');
-      if (lastUser) document.getElementById("userLogin").value = lastUser;
-      this.#loginPage.classList.add("show");
-      this.#loginPage.querySelector(".closeg").onclick = () => this.#loginPage.classList.remove("show");
-      document.getElementById("loginBtn").onclick = async () => await this.#handleLogin();
+    this.#btnNet.addEventListener('click', () => this.#openLogin());
+    this.#loginPage.querySelector(".closeg").addEventListener('click', () => this.#closeLogin());
+    this.#loginBtn.addEventListener('click', () => this.#handleLogin());
+    this.#rescanBtn.addEventListener('click', () => this.#runDiscovery({ force: true }));
+
+    this.#urlInput.addEventListener('input', () => {
+      this.#urlDirty = true;
+      this.#setStatus('');
     });
+    [this.#urlInput, this.#userInput, this.#passInput].forEach(el =>
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') this.#handleLogin(); })
+    );
+
+    // Session expirée / déconnexion : le voyant repasse au rouge.
+    window.addEventListener('auth:logout', () => this.#indicator.classList.remove('active'));
   }
 
+  // ── Ouverture : la fenêtre s'affiche TOUT DE SUITE, la recherche du
+  //    serveur se fait en arrière-plan avec sa progression visible. ──
+  #openLogin() {
+    this.#urlInput.value = this.#api.getBaseUrl();
+    this.#urlDirty = false;
+
+    // Nom mémorisé depuis la dernière connexion réussie ; on ne touche
+    // pas au champ s'il n'y a rien de mémorisé.
+    let lastUser = '';
+    try { lastUser = localStorage.getItem('last_username') || ''; } catch { /* ignore */ }
+    if (lastUser) this.#userInput.value = lastUser;
+
+    this.#passInput.value = '';
+    this.#setStatus('');
+    this.#loginPage.classList.add("show");
+
+    // Focus sur le premier champ réellement à remplir.
+    (this.#userInput.value.trim() ? this.#passInput : this.#userInput).focus();
+
+    this.#runDiscovery();
+  }
+
+  #closeLogin() {
+    ServerDiscovery.cancel();
+    this.#discovering = false;
+    this.#loginPage.classList.remove("show");
+  }
+
+  #setStatus(text, kind = '') {
+    this.#statusEl.textContent = text;
+    this.#statusEl.className = `server-status${kind ? ' ' + kind : ''}`;
+  }
+
+  #setBusy(busy) {
+    this.#busy = busy;
+    this.#loginBtn.disabled = busy;
+    this.#rescanBtn.disabled = busy;
+    this.#loginBtn.querySelector('.btn-text').textContent = busy ? '⏳ Connexion…' : '🔑 Se connecter';
+  }
+
+  // ── Recherche du serveur ───────────────────────────────────
+  // Retourne l'URL trouvée (ou '').
+  async #runDiscovery({ force = false, skipSaved = false } = {}) {
+    if (this.#discovering) {
+      if (!force) return '';
+      ServerDiscovery.cancel();
+    }
+    const run = ++this.#runId;
+    this.#discovering = true;
+    this.#rescanBtn.classList.add('spinning');
+
+    // Ce que le prof a tapé à la main est testé en premier.
+    const typed = this.#urlInput.value.trim();
+    const savedUrl = typed ? ApiClient.normalize(typed) : this.#api.getBaseUrl();
+
+    try {
+      const res = await ServerDiscovery.discover({
+        savedUrl, skipSaved,
+        onStatus: msg => { if (run === this.#runId) this.#setStatus(msg, 'busy'); },
+      });
+      if (res.cancelled || run !== this.#runId) return '';
+
+      this.#diagEl.textContent = res.diag;
+
+      if (res.url) {
+        // Le prof est en train de saisir une autre adresse : on ne l'écrase pas.
+        if (this.#urlDirty && !force && res.source !== 'saved') {
+          this.#setStatus(`ℹ️ Serveur détecté : ${res.url} — touchez ↻ pour l'utiliser`, 'ok');
+          return '';
+        }
+        // Adresse vérifiée par /whoami : on peut la mémoriser.
+        this.#urlInput.value = res.url;
+        this.#urlDirty = false;
+        this.#api.setBaseUrl(res.url);
+        this.#setStatus(`✅ Serveur trouvé : ${res.url}`, 'ok');
+        return res.url;
+      }
+      this.#setStatus(res.message, 'warn');
+      return '';
+    } finally {
+      // Une recherche plus récente a pris le relais : ne pas toucher à l'état.
+      if (run === this.#runId) {
+        this.#discovering = false;
+        this.#rescanBtn.classList.remove('spinning');
+      }
+    }
+  }
+
+  async #pingOk() {
+    try { return await this.#api.ping(); } catch { return false; }
+  }
+
+  // ── Connexion ──────────────────────────────────────────────
   async #handleLogin() {
-    const serverUrl = document.getElementById("serverUrlInput").value;
-    const user = document.getElementById("userLogin").value;
-    const pass = document.getElementById("passLogin").value;
+    if (this.#busy) return;
 
-    if (!serverUrl || !user || !pass) {
-      showToast("Adresse, identifiant ou mot de passe manquant", "warn");
+    const user = this.#userInput.value.trim();
+    const pass = this.#passInput.value;
+    if (!user || !pass) {
+      showToast("Identifiant ou mot de passe manquant", "warn");
       return;
     }
 
-    this.#api.setBaseUrl(serverUrl);
-
+    this.#setBusy(true);
     try {
-      const resp = await this.#api.ping();
-      if (!resp) throw new Error();
-    } catch {
-      showToast("Serveur injoignable — vérifiez l'adresse et le réseau WiFi", "warn");
-      return;
-    }
+      let serverUrl = this.#urlInput.value.trim();
 
-    try {
+      // Pas d'adresse : on la cherche, sans obliger le prof à relancer.
+      if (!serverUrl) {
+        serverUrl = await this.#runDiscovery({ force: true });
+        if (!serverUrl) {
+          showToast("Serveur introuvable — saisissez son adresse", "warn", 4000);
+          return;
+        }
+      } else {
+        ServerDiscovery.cancel();          // une recherche en arrière-plan ne doit pas gêner la connexion
+        this.#discovering = false;
+        this.#rescanBtn.classList.remove('spinning');
+        this.#urlInput.value = this.#api.setBaseUrl(serverUrl, { persist: false });   // normalisée, mais pas mémorisée tant qu'elle n'a pas servi
+      }
+
+      // Le serveur répond-il ? Sinon l'adresse est peut-être périmée
+      // (IP attribuée par DHCP qui a changé) : un scan avant d'abandonner.
+      this.#setStatus('Connexion au serveur…', 'busy');
+      if (!await this.#pingOk()) {
+        const found = await this.#runDiscovery({ force: true, skipSaved: true });
+        if (!found || !await this.#pingOk()) {
+          this.#setStatus('Serveur injoignable. Vérifiez le WiFi et l\'adresse.', 'warn');
+          showToast("Serveur injoignable — vérifiez l'adresse et le réseau WiFi", "warn", 4000);
+          return;
+        }
+      }
+
       await this.#auth.login(user, pass);
-      this.#loginPage.classList.remove("show");
+      this.#api.persistBaseUrl();
+      this.#passInput.value = '';
+      this.#closeLogin();
       this.#indicator.classList.add('active');
-    } catch {
-      showToast("Identifiants incorrects","warn");
+    } catch (e) {
       this.#indicator.classList.remove('active');
+      if (e.status === 401) {
+        this.#setStatus('Identifiants incorrects.', 'warn');
+        showToast("Identifiants incorrects", "warn");
+      } else {
+        const msg = describeNetError(e);
+        this.#setStatus(msg, 'warn');
+        showToast(msg, "warn", 5000);
+      }
+    } finally {
+      this.#setBusy(false);
     }
   }
- }
+}
 
 // ============================================================
 //  point d'entrée unique

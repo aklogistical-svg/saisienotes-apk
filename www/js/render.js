@@ -87,15 +87,27 @@ const TableRenderer = {
   },
 };
 
+// Message discret selon ce qui manque réellement à l'utilisateur.
+function emptyHintText() {
+  if (!state.get('rowNotes').length)  return 'Chargez un fichier de notes, ou connectez-vous au serveur, pour commencer.';
+  if (!dom.fClasseSel.value)          return 'Sélectionnez une classe et une matière pour afficher les notes.';
+  if (!dom.fMatiereSel.value)         return 'Sélectionnez une matière pour afficher les notes.';
+  return 'Aucun élève pour cette classe et cette matière.';
+}
+
 // ✅ #19 — guard explicite pour rendu vide
 function render() {
   const headers  = state.get('headers');
   const filtered = state.get('filtered');
 
   if (!headers.length || !filtered.length) {
+    // Aucune ligne saisissable ne doit rester dans le DOM : ni tableau, ni
+    // cartes, et le pavé numérique éventuellement ouvert est refermé.
+    try { numpad.close(); } catch (_) { /* pavé pas encore initialisé */ }
+    const hint = emptyHintText();
     dom.theadtab.innerHTML = '';
-    dom.tbodytab.innerHTML = `<tr><td colspan="100" class="empty-hint">Sélectionnez une classe et une matière pour afficher les notes.</td></tr>`;
-    dom.cardstab.innerHTML = `<div class="empty-hint">Sélectionnez une classe et une matière pour afficher les notes.</div>`;
+    dom.tbodytab.innerHTML = `<tr><td colspan="100" class="empty-hint">${hint}</td></tr>`;
+    dom.cardstab.innerHTML = `<div class="empty-hint">${hint}</div>`;
     return;
   }
   state.get('currentView') === 'table'

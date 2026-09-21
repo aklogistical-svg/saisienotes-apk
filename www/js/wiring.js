@@ -20,7 +20,14 @@ function attachDeleteDraftBtn(text) {
 dom.openBtn.addEventListener('click', async () => {
   if (state.get('unsaved') && !confirm('Données non sauvegardées. Continuer ?')) return;
   if (state.get('user_id')) {
-    main.sync.chargedt().catch(e => showToast('Erreur chargement serveur', 'error'));
+    main.sync.chargedt().catch(e => {
+      logger.error('Chargement serveur', e);
+      showErrorToast({
+        title  : 'Chargement depuis le serveur impossible',
+        detail : escHtml(describeNetError(e)),
+        actions: [{ label: '🔄 Réessayer', style: 'primary', onClick: () => dom.openBtn.click() }],
+      });
+    });
     return;
   } else {
     await fileManager.open();
@@ -103,3 +110,5 @@ dom.fileInput.addEventListener('change', async ev => {
   }
 });
 
+// État initial : aucune donnée → message d'accueil discret plutôt qu'un écran vide.
+applyFilters();

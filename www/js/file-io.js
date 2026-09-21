@@ -255,17 +255,19 @@ class ExportManager {
     if (!validateAllNotes()) { return; }
     showOverlay('Exportation en cours…');
     if (state.get('user_id')) {
-      // ⚠ Avant correction : si exportdt() levait une exception (erreur
-      // serveur autre que 401 — 500, timeout, etc.), hideOverlay() n'était
-      // jamais atteint, laissant la fenêtre d'attente bloquée sans aucun
-      // message d'erreur visible pour le prof.
+      // La fenêtre d'attente est TOUJOURS refermée (finally), quelle que soit
+      // la cause : erreur HTTP, refus d'écriture côté serveur, session
+      // expirée, ou serveur qui ne répond plus. Ce dernier cas était le
+      // vrai trou : sans délai maximum sur les requêtes, ni le catch ni le
+      // finally n'étaient jamais atteints (voir netRequest dans sync.js,
+      // délai de 75 s sur l'envoi).
       try {
         await main.sync.exportdt();
       } catch (err) {
         logger.error('Export serveur error', err);
         showErrorToast({
           title  : 'Erreur lors de l\'export vers le serveur',
-          detail : err?.message ?? '',
+          detail : escHtml(describeNetError(err)),
           actions: [
             { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.export() },
           ],

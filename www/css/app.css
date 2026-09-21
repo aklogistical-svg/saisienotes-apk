@@ -558,6 +558,7 @@
   .modal-content {
     background: #fff; border-radius: var(--radius); padding: 1.4rem;
     width: min(90%, 480px); box-shadow: var(--shadow-lg);
+    max-height: 92vh; overflow-y: auto;
     animation: scale-conf .18s ease-out;
   }
   .modal-content h3 { font-size: 1rem; font-weight: 600; margin-bottom: .7rem; }
@@ -724,6 +725,35 @@
   }
   .cardlogin button:hover  { background: var(--accent-dim); }
   .cardlogin button:active { background: #007a4a; }
+  .cardlogin button:disabled { opacity: .6; cursor: default; }
+
+  /* Adresse du serveur + bouton « rechercher » */
+  .url-row { display: flex; gap: .4rem; align-items: stretch; }
+  .url-row input { flex: 1; min-width: 0; }
+  .cardlogin .rescan-btn {
+    flex: 0 0 auto; width: 2.6rem; padding: 0; display: inline-flex;
+    align-items: center; justify-content: center;
+    background: #eef2f7; color: #4a5568;
+  }
+  .cardlogin .rescan-btn:hover  { background: #e2e8f0; }
+  .cardlogin .rescan-btn:active { background: #d5dde8; }
+  .rescan-btn svg { width: 1.15rem; height: 1.15rem; }
+  .rescan-btn.spinning svg { animation: rescan-spin 1s linear infinite; }
+  @keyframes rescan-spin { to { transform: rotate(360deg); } }
+
+  /* Ligne d'état de la recherche (réserve sa hauteur : pas de saut de mise en page) */
+  .server-status { min-height: 1.1rem; font-size: .78rem; line-height: 1.3; color: var(--muted); }
+  .server-status.busy { color: var(--primary); }
+  .server-status.ok   { color: #0a7a4a; }
+  .server-status.warn { color: #b45309; }
+
+  /* Diagnostic réseau (repliable) */
+  .net-diag { font-size: .75rem; color: var(--muted); }
+  .net-diag summary { cursor: pointer; user-select: none; }
+  .net-diag pre {
+    margin: .4rem 0 0; padding: .5rem .6rem; background: #f4f6f9; border-radius: var(--radius-sm);
+    white-space: pre-wrap; word-break: break-word; font-family: 'DM Mono', monospace; font-size: .7rem; color: #4a5568;
+  }
 
   .btn-text,
   .btn-spin {
