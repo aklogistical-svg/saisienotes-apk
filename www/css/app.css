@@ -708,6 +708,16 @@
   .serve-indic { width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; flex-shrink: 0; transition: background .3s, box-shadow .3s; }
   .serve-indic.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 
+  /* Compte (visible seulement une fois connecté) */
+  #accountBtn[hidden] { display: none; }
+  .account-user { font-size: .85rem; color: var(--muted); margin: -.2rem 0 .6rem; }
+  .account-logout-btn {
+    margin-top: .7rem; width: 100%; padding: .6rem; border: none; border-radius: var(--radius);
+    background: transparent; color: #b91c1c; font-size: .85rem; cursor: pointer;
+  }
+  .account-logout-btn:active { background: #fef2f2; }
+  #pwdForm .server-status { margin-top: -.2rem; }
+
   /* ── LOGIN CARD ──────────────────────────────────────── */
   .cardlogin { display: flex; flex-direction: column; gap: .6rem; margin-top: .5rem; }
   .cardlogin label { font-size: .82rem; color: var(--text-dim, #9aa); margin-bottom: -.35rem; }

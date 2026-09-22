@@ -32,6 +32,11 @@
       <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="6" rx="1.5"/><rect x="3.5" y="13.5" width="17" height="6" rx="1.5"/><circle cx="7" cy="7.5" r=".75" fill="currentColor" stroke="none"/><circle cx="7" cy="16.5" r=".75" fill="currentColor" stroke="none"/></svg></span>
       <span class="txt">Connexion</span>
     </button>
+    <!-- Visible uniquement une fois connecté (voir UIController#setLoggedInUi) -->
+    <button id="accountBtn" class="hbtn" title="Mon compte" aria-label="Mon compte" hidden>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span class="txt">Compte</span>
+    </button>
     <button id="toggleView" class="hbtn" type="button" aria-label="Passer en vue cartes" title="Passer en vue cartes">
       <span class="ico"></span>
       <span class="txt">Cartes</span>
@@ -187,6 +192,35 @@
         <summary>Diagnostic réseau</summary>
         <pre id="netDiag">Aucune recherche effectuée.</pre>
       </details>
+    </div>
+  </div>
+</div>
+
+<div id="accountPage" class="modalg">
+  <div class="modal-content">
+    <span class="closeg">&times;</span>
+    <h3>Mon compte</h3>
+    <div class="cardlogin">
+      <p id="accountUserLabel" class="account-user"></p>
+
+      <form id="pwdForm" autocomplete="off">
+        <label for="oldPwd">Mot de passe actuel</label>
+        <input id="oldPwd" type="password" placeholder="Mot de passe actuel" autocomplete="current-password">
+
+        <label for="newPwd">Nouveau mot de passe</label>
+        <input id="newPwd" type="password" placeholder="Au moins 4 caractères" autocomplete="new-password">
+
+        <label for="newPwd2">Confirmer le nouveau mot de passe</label>
+        <input id="newPwd2" type="password" placeholder="Retapez le nouveau mot de passe" autocomplete="new-password">
+
+        <div id="pwdStatus" class="server-status" role="status" aria-live="polite"></div>
+
+        <button id="pwdSubmitBtn" type="submit">
+          <span class="btn-text">🔒 Changer le mot de passe</span>
+        </button>
+      </form>
+
+      <button id="logoutBtn" type="button" class="account-logout-btn">↩︎ Se déconnecter</button>
     </div>
   </div>
 </div>

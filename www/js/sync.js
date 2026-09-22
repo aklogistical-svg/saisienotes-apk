@@ -346,6 +346,14 @@ class ApiClient {
   download() {
     return this.#request('/sync/download', { timeoutMs: 30000, retries: 1 });
   }
+
+  changePassword(oldPassword, newPassword) {
+    return this.#request('/auth/change-password', {
+      method: 'POST',
+      body: { old_password: oldPassword, new_password: newPassword },
+      timeoutMs: 10000,
+    });
+  }
 }
 
 // ============================================================
@@ -512,6 +520,18 @@ class UIController {
   #statusEl;
   #diagEl;
 
+  #accountPage;
+  #accountBtn;
+  #accountUserLabel;
+  #pwdForm;
+  #oldPwdInput;
+  #newPwdInput;
+  #newPwd2Input;
+  #pwdStatusEl;
+  #pwdSubmitBtn;
+  #logoutBtn;
+  #pwdBusy = false;   // changement de mot de passe en cours
+
   #urlDirty    = false;   // l'utilisateur a modifié l'adresse à la main
   #busy        = false;   // connexion en cours
   #discovering = false;   // recherche du serveur en cours
@@ -531,6 +551,18 @@ class UIController {
     this.#rescanBtn = document.getElementById("rescanBtn");
     this.#statusEl  = document.getElementById("serverStatus");
     this.#diagEl    = document.getElementById("netDiag");
+
+    this.#accountPage      = document.getElementById("accountPage");
+    this.#accountBtn       = document.getElementById("accountBtn");
+    this.#accountUserLabel = document.getElementById("accountUserLabel");
+    this.#pwdForm          = document.getElementById("pwdForm");
+    this.#oldPwdInput      = document.getElementById("oldPwd");
+    this.#newPwdInput      = document.getElementById("newPwd");
+    this.#newPwd2Input     = document.getElementById("newPwd2");
+    this.#pwdStatusEl      = document.getElementById("pwdStatus");
+    this.#pwdSubmitBtn     = document.getElementById("pwdSubmitBtn");
+    this.#logoutBtn        = document.getElementById("logoutBtn");
+
     this.#bindEvents();
   }
 
@@ -549,8 +581,100 @@ class UIController {
       el.addEventListener('keydown', e => { if (e.key === 'Enter') this.#handleLogin(); })
     );
 
-    // Session expirée / déconnexion : le voyant repasse au rouge.
-    window.addEventListener('auth:logout', () => this.#indicator.classList.remove('active'));
+    // Session expirée / déconnexion : le voyant repasse au rouge et le
+    // menu compte redevient inaccessible.
+    window.addEventListener('auth:logout', () => this.#setLoggedInUi(false));
+
+    this.#accountBtn.addEventListener('click', () => this.#openAccount());
+    this.#accountPage.querySelector(".closeg").addEventListener('click', () => this.#closeAccount());
+    this.#pwdForm.addEventListener('submit', e => { e.preventDefault(); this.#handleChangePassword(); });
+    this.#logoutBtn.addEventListener('click', () => this.#handleLogout());
+  }
+
+  // ── Bascule l'affichage entre visiteur et professeur connecté ──────
+  #setLoggedInUi(loggedIn) {
+    this.#indicator.classList.toggle('active', loggedIn);
+    this.#accountBtn.hidden = !loggedIn;
+    if (!loggedIn) this.#closeAccount();
+  }
+
+  // ── Écran « Mon compte » ────────────────────────────────────
+  #openAccount() {
+    this.#accountUserLabel.textContent = currentMeta?.forprof ? `Connecté en tant que ${currentMeta.forprof}` : '';
+    this.#oldPwdInput.value = '';
+    this.#newPwdInput.value = '';
+    this.#newPwd2Input.value = '';
+    this.#setPwdStatus('');
+    this.#accountPage.classList.add("show");
+    this.#oldPwdInput.focus();
+  }
+
+  #closeAccount() {
+    this.#accountPage.classList.remove("show");
+  }
+
+  #setPwdStatus(text, kind = '') {
+    this.#pwdStatusEl.textContent = text;
+    this.#pwdStatusEl.className = `server-status${kind ? ' ' + kind : ''}`;
+  }
+
+  #setPwdBusy(busy) {
+    this.#pwdBusy = busy;
+    this.#pwdSubmitBtn.disabled = busy;
+    this.#pwdSubmitBtn.querySelector('.btn-text').textContent = busy ? '⏳ Changement…' : '🔒 Changer le mot de passe';
+  }
+
+  // ── Changement de mot de passe, en se basant sur l'ancien ──────────
+  async #handleChangePassword() {
+    if (this.#pwdBusy) return;
+
+    const oldPwd  = this.#oldPwdInput.value;
+    const newPwd  = this.#newPwdInput.value;
+    const newPwd2 = this.#newPwd2Input.value;
+
+    if (!oldPwd || !newPwd) {
+      this.#setPwdStatus('Renseignez l\'ancien et le nouveau mot de passe.', 'warn');
+      return;
+    }
+    if (newPwd.length < 4) {
+      this.#setPwdStatus('Le nouveau mot de passe doit contenir au moins 4 caractères.', 'warn');
+      return;
+    }
+    if (newPwd !== newPwd2) {
+      this.#setPwdStatus('Les deux mots de passe ne correspondent pas.', 'warn');
+      return;
+    }
+    if (newPwd === oldPwd) {
+      this.#setPwdStatus('Le nouveau mot de passe doit être différent de l\'ancien.', 'warn');
+      return;
+    }
+
+    this.#setPwdBusy(true);
+    this.#setPwdStatus('Changement en cours…', 'busy');
+    try {
+      await this.#api.changePassword(oldPwd, newPwd);
+      showToast('Mot de passe changé avec succès', 'success');
+      this.#closeAccount();
+    } catch (e) {
+      // Session expirée pendant l'opération : redirige naturellement vers
+      // la reconnexion plutôt que d'afficher une erreur confuse.
+      if (e.status === 401 && /token/i.test(e.message || '')) {
+        this.#auth.logout();
+        showToast('Session expirée, veuillez vous reconnecter', 'warn', 4000);
+        return;
+      }
+      // 401 (mauvais ancien mot de passe), 429 (verrouillé), 422
+      // (validation serveur) portent déjà un message clair depuis l'API.
+      this.#setPwdStatus(describeNetError(e), 'warn');
+    } finally {
+      this.#setPwdBusy(false);
+    }
+  }
+
+  // ── Déconnexion volontaire, depuis le menu compte ───────────────────
+  #handleLogout() {
+    this.#auth.logout();
+    showToast('Déconnecté', 'success');
   }
 
   // ── Ouverture : la fenêtre s'affiche TOUT DE SUITE, la recherche du
@@ -690,9 +814,9 @@ class UIController {
       this.#api.persistBaseUrl();
       this.#passInput.value = '';
       this.#closeLogin();
-      this.#indicator.classList.add('active');
+      this.#setLoggedInUi(true);
     } catch (e) {
-      this.#indicator.classList.remove('active');
+      this.#setLoggedInUi(false);
       if (e.status === 401) {
         this.#setStatus('Identifiants incorrects.', 'warn');
         showToast("Identifiants incorrects", "warn");
