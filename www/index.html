@@ -26,26 +26,6 @@
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a1.5 1.5 0 0 0-2 2v12a1.5 1.5 0 0 0 2 2h12a1.5 1.5 0 0 0 2-2v-4"/><path d="M10 16c0-5 4-8 9-8"/><path d="M15 4l4 4-4 4"/></svg></span>
     <span class="txt">Exporter</span>
   </button>
-  <div class="more-menu-wrap">
-    <button id="moreBtn" class="hbtn" type="button" aria-haspopup="true" aria-expanded="false" title="Plus d'actions" aria-label="Plus d'actions">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
-      <span class="txt">Plus</span>
-    </button>
-    <div id="moreMenu" class="more-menu" role="menu" hidden>
-      <button id="expDownload" class="more-menu-item" role="menuitem" type="button">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></span>
-        <span>Télécharger dans Downloads</span>
-      </button>
-      <button id="pdfBtn" class="more-menu-item" role="menuitem" type="button">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><text x="7.4" y="16.5" font-size="6.2" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">PDF</text></svg></span>
-        <span>PDF des notes</span>
-      </button>
-      <button id="bilanBtn" class="more-menu-item" role="menuitem" type="button">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><path d="M9 3.5h6v2.2a.8.8 0 0 1-.8.8H9.8a.8.8 0 0 1-.8-.8z"/><path d="m8.5 12.5 2 2 4-4.2"/><path d="M8.5 17h7"/></svg></span>
-        <span>Bilan de saisie</span>
-      </button>
-    </div>
-  </div>
   <div class="infosource">
     <button id="netToggle" class="hbtn serve-btn" title="Connexion serveur" aria-label="Connexion serveur">
       <span id="netIndicator" class="serve-indic"></span>
@@ -61,6 +41,26 @@
       <span class="ico"></span>
       <span class="txt">Cartes</span>
     </button>
+    <div class="more-menu-wrap">
+      <button id="moreBtn" class="hbtn" type="button" aria-haspopup="true" aria-expanded="false" title="Plus d'actions" aria-label="Plus d'actions">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+        <span class="txt">Plus</span>
+      </button>
+      <div id="moreMenu" class="more-menu" role="menu" hidden>
+        <button id="expDownload" class="more-menu-item" role="menuitem" type="button">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></span>
+          <span>Télécharger dans Downloads</span>
+        </button>
+        <button id="pdfBtn" class="more-menu-item" role="menuitem" type="button">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><text x="7.4" y="16.5" font-size="6.2" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">PDF</text></svg></span>
+          <span>PDF des notes (Downloads)</span>
+        </button>
+        <button id="bilanBtn" class="more-menu-item" role="menuitem" type="button">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><path d="M9 3.5h6v2.2a.8.8 0 0 1-.8.8H9.8a.8.8 0 0 1-.8-.8z"/><path d="m8.5 12.5 2 2 4-4.2"/><path d="M8.5 17h7"/></svg></span>
+          <span>Bilan de saisie</span>
+        </button>
+      </div>
+    </div>
     <span id="txtPeriode"></span>
   </div>
 </header>

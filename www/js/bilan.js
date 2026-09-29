@@ -112,7 +112,10 @@ const BilanManager = (() => {
     const exempteTxt = g.exemptes ? ` · ${g.exemptes} exempté${g.exemptes > 1 ? 's' : ''}` : '';
     const summary = `
       <span class="bilan-titre">${escHtml(g.nomclasse)} — ${escHtml(g.namemat)}</span>
-      <span class="bilan-badge ${badgeClass}">${g.complets}/${g.concernes} élèves · ${pourcentage}%</span>
+      <span class="bilan-summary-right">
+        <span class="bilan-badge ${badgeClass}">${g.complets}/${g.concernes} élèves · ${pourcentage}%</span>
+        <span class="bilan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </span>
     `;
 
     if (!g.incomplets.length) {
@@ -137,10 +140,11 @@ const BilanManager = (() => {
         </li>`;
     }).join('');
 
-    // Ouvert par défaut : c'est ici qu'il y a quelque chose à faire.
-    // (Un groupe complet, lui, reste replié : rien à y regarder.)
+    // Replié par défaut, même pour un groupe incomplet : seul l'en-tête
+    // (classe, matière, badge) est visible tant qu'on n'a pas cliqué —
+    // la liste d'élèves ne s'affiche qu'au clic, comme un select qu'on déplie.
     return `
-      <details class="bilan-group" open>
+      <details class="bilan-group">
         <summary>${summary}</summary>
         <p class="bilan-sub">Effectif : ${g.effectif}${escHtml(exempteTxt)} — touchez un champ pour y aller directement :</p>
         <ul class="bilan-list">${rows}</ul>

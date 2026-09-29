@@ -46,16 +46,6 @@ const guide = (() => {
       desc     : 'Si vous êtes <strong>connecté au serveur</strong>, envoie directement les notes vers la base centrale.<br><br>Sinon, génère un fichier <strong>CSV</strong> et ouvre le partage natif (Drive, mail, WhatsApp...) pour l\'envoyer où vous voulez.',
     },
     {
-      targetId : 'moreBtn',
-      revealMenu: true,
-      title    : t(ICO.more, 'Plus d\'actions'),
-      desc     : `Trois actions moins fréquentes, regroupées ici :<br><br>
-<strong>${ic(ICO.download)} Télécharger dans Downloads</strong> — copie un fichier <strong>CSV</strong> directement dans le dossier Téléchargements de l'appareil.<br><br>
-<strong>${ic(ICO.pdf)} PDF des notes</strong> — génère un PDF avec un tableau par classe et par matière, pour imprimer ou archiver.<br><br>
-<strong>${ic(ICO.bilan)} Bilan de saisie</strong> — montre qui a déjà des notes et qui n'en a pas, classe par classe et matière par matière. Touchez un champ manquant dans le Bilan pour sauter directement dessus dans le tableau de saisie.`,
-      highlightIds: ['moreBtn', 'expDownload', 'pdfBtn', 'bilanBtn'],
-    },
-    {
       targetId : 'netToggle',
       title    : t(ICO.server, 'Connexion Serveur'),
       desc     : 'Connectez-vous au <strong>serveur central</strong> pour charger ou envoyer les données en ligne.<br><br>L\'app cherche automatiquement le serveur sur le réseau WiFi de l\'école ; le bouton ↻ relance la recherche, et « Diagnostic réseau » en bas de l\'écran de connexion aide à comprendre pourquoi il n\'est pas trouvé.<br><br>Le voyant rouge 🔴 indique que vous êtes hors connexion ; vert 🟢 = connecté.',
@@ -69,6 +59,16 @@ const guide = (() => {
       targetId : 'toggleView',
       title    : t(ICO.view, "Changer l'affichage"),
       desc     : 'Basculez entre la <strong>vue tableau</strong> (desktop) et la <strong>vue cartes</strong> (mobile) selon votre préférence.<br><br>Sur mobile, la vue cartes est activée automatiquement.',
+    },
+    {
+      targetId : 'moreBtn',
+      revealMenu: true,
+      title    : t(ICO.more, 'Plus d\'actions'),
+      desc     : `Trois actions moins fréquentes, regroupées ici :<br><br>
+<strong>${ic(ICO.download)} Télécharger dans Downloads</strong> — copie un fichier <strong>CSV</strong> directement dans le dossier Téléchargements de l'appareil.<br><br>
+<strong>${ic(ICO.pdf)} PDF des notes</strong> — génère un PDF avec un tableau par classe et par matière, et le dépose lui aussi dans le dossier <strong>Téléchargements</strong>, pour imprimer ou archiver.<br><br>
+<strong>${ic(ICO.bilan)} Bilan de saisie</strong> — montre qui a déjà des notes et qui n'en a pas, classe par classe et matière par matière. Touchez un champ manquant dans le Bilan pour sauter directement dessus dans le tableau de saisie.`,
+      highlightIds: ['moreBtn', 'expDownload', 'pdfBtn', 'bilanBtn'],
     },
     {
       targetId : null,

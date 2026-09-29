@@ -386,7 +386,13 @@ class ExportManager {
 
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
-    const sousTitre = [currentMeta?.datasequ, currentMeta?.forprof ? `Prof. ${currentMeta.forprof}` : null, `Effectif : ${g.rows.length}`]
+    // Ndevoir : en principe identique pour toute la classe/matière (fixé
+    // via le sélecteur Ndevoir de l'écran de saisie), donc lu sur la
+    // première ligne du groupe. Si jamais il variait d'un élève à
+    // l'autre dans les données, on affiche quand même une valeur plutôt
+    // que de planter — mieux vaut une info approximative qu'absente.
+    const ndevoir = g.rows[0]?.nbrenote ?? 1;
+    const sousTitre = [currentMeta?.datasequ, currentMeta?.forprof ? `Prof. ${currentMeta.forprof}` : null, `Ndevoir : ${ndevoir}`, `Effectif : ${g.rows.length}`]
       .filter(Boolean).join('   —   ');
     doc.text(sousTitre, marginX, 20);
 
@@ -416,6 +422,10 @@ class ExportManager {
   // seulement la sélection courante de l'écran. Pas de moyenne : les
   // coefficients ne sont pas disponibles ici, une moyenne non pondérée
   // serait trompeuse à côté d'un vrai bulletin.
+  // Comme "Télécharger dans Downloads" (CSV) : le PDF se dépose directement
+  // dans le dossier Téléchargements de l'appareil via DownloadsSaver,
+  // plutôt que dans un sous-dossier de l'app + partage natif. Plus simple
+  // à retrouver, et cohérent avec ce que le prof connaît déjà du CSV.
   async exportPdf() {
     const rowNotes    = state.get('rowNotes');
     const rowMatieres = state.get('rowMatieres') || [];
@@ -433,6 +443,10 @@ class ExportManager {
       showToast('Bibliothèque PDF introuvable dans l\'APK', 'error');
       return;
     }
+    if (!CapPlugins?.DownloadsSaver) {
+      showToast('Téléchargement indisponible sur cette plateforme', 'warn');
+      return;
+    }
 
     showOverlay('Génération du PDF…');
     try {
@@ -443,29 +457,15 @@ class ExportManager {
         this.#renderPdfGroup(doc, g);
       });
 
-      const fileName  = this.#buildName(currentMeta, 'pdf');
-      const exportPath = `SaisieNotes/exports/${fileName}`;
-      // Pas d'"encoding" ici (contrairement au CSV en UTF8 texte) : sans
-      // ce paramètre, Filesystem.writeFile attend du base64 binaire, ce
-      // que fournit justement doc.output('datauristring').
+      const fileName = this.#buildName(currentMeta, 'pdf');
+      // doc.output('datauristring') fournit déjà du base64 : c'est ce que
+      // DownloadsSaver.saveFile attend (même format que le CSV, où
+      // #blobToBase64 produit la même chose à partir d'un Blob texte).
       const pdfBase64 = doc.output('datauristring').split(',')[1];
-      await CapPlugins.Filesystem.writeFile({
-        path      : exportPath,
-        directory : CapPlugins.Directory.External,
-        data      : pdfBase64,
-        recursive : true,
-      });
-      const { uri } = await CapPlugins.Filesystem.getUri({
-        path: exportPath, directory: CapPlugins.Directory.External,
-      });
 
-      showToast(`PDF généré — ${fileName}`, 'success', 4000);
-      await CapPlugins.Share.share({
-        title: 'Notes (PDF)',
-        text : fileName,
-        url  : uri,
-        dialogTitle: 'Partager le PDF',
-      }).catch(() => {}); // annulation du partage = pas une erreur
+      await CapPlugins.DownloadsSaver.saveFile({ fileName, mimeType: 'application/pdf', data: pdfBase64 });
+
+      showToast(`Téléchargé dans Downloads — ${fileName}`, 'success', 4000);
     } catch (err) {
       logger.error('ExportManager.exportPdf error', err);
       showErrorToast({

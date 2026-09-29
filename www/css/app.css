@@ -781,6 +781,13 @@
   }
   .bilan-group summary::-webkit-details-marker { display: none; }
   .bilan-titre { font-weight: 600; font-size: .88rem; color: #1a2233; }
+  .bilan-summary-right { display: flex; align-items: center; gap: .5rem; }
+  .bilan-chevron {
+    display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; color: var(--muted);
+    transition: transform .18s ease;
+  }
+  .bilan-chevron svg { width: 100%; height: 100%; display: block; }
+  .bilan-group[open] .bilan-chevron { transform: rotate(180deg); }
   .bilan-badge {
     font-size: .74rem; font-weight: 600; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap;
   }
