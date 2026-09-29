@@ -215,11 +215,11 @@ class FileManager {
    ============================================================ */
 class ExportManager {
   // ✅ #3 — reçoit meta en paramètre, ne lit plus le DOM
-  #buildName(meta) {
+  #buildName(meta, ext = 'csv') {
     const d      = new Date();
     const pad    = n => String(n).padStart(2, '0');
     const profnom = meta?.forprof ?? 'export';
-    return `Saisie_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.csv`;
+    return `Saisie_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.${ext}`;
   }
 
   #buildBlob() {
@@ -354,6 +354,125 @@ class ExportManager {
         detail : err?.message ?? '',
         actions: [
           { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.downloadToDownloads() },
+        ],
+      });
+    } finally {
+      hideOverlay();
+    }
+  }
+
+  // Même arrondi défensif que formatForDisplay (input-factory.js) : une
+  // note Access "Single" imprécise (11.449999809265137) ne doit jamais
+  // apparaître telle quelle sur un document imprimé/partagé.
+  #fmtNote(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+    return String(rounded).replace('.', ',');
+  }
+
+  // Un même idmatiere peut exister sous plusieurs classes (une ligne
+  // T_Matiere par classe) : la clé de regroupement est donc (classe,
+  // matière), jamais idmatiere seul, sous peine de mélanger deux classes
+  // dans le même tableau.
+  // Le regroupement (classe, matière) est partagé avec le Bilan
+  // (voir dataset.js : groupNotesByClasseMatiere).
+
+  #renderPdfGroup(doc, g) {
+    const marginX = 12;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${g.nomclasse} — ${g.namemat}`, marginX, 14);
+
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+    const sousTitre = [currentMeta?.datasequ, currentMeta?.forprof ? `Prof. ${currentMeta.forprof}` : null, `Effectif : ${g.rows.length}`]
+      .filter(Boolean).join('   —   ');
+    doc.text(sousTitre, marginX, 20);
+
+    const body = g.rows.map((r, i) => [
+      i + 1,
+      r.nomel ?? '',
+      r.prenomel ?? '',
+      r.genre ?? '',
+      this.#fmtNote(r.devoir11),
+      this.#fmtNote(r.devoir22),
+      this.#fmtNote(r.devoir33),
+      this.#fmtNote(r.componote),
+    ]);
+
+    doc.autoTable({
+      startY: 25,
+      margin: { left: marginX, right: marginX },
+      head: [['N°', 'Nom', 'Prénom', 'Genre', 'Devoir 1', 'Devoir 2', 'Devoir 3', 'Compo']],
+      body,
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [15, 40, 80] },
+      columnStyles: { 0: { cellWidth: 10 }, 3: { cellWidth: 16, halign: 'center' } },
+    });
+  }
+
+  // Un PDF avec un tableau par (classe, matière) chargée en mémoire — pas
+  // seulement la sélection courante de l'écran. Pas de moyenne : les
+  // coefficients ne sont pas disponibles ici, une moyenne non pondérée
+  // serait trompeuse à côté d'un vrai bulletin.
+  async exportPdf() {
+    const rowNotes    = state.get('rowNotes');
+    const rowMatieres = state.get('rowMatieres') || [];
+    if (!Array.isArray(rowNotes) || !rowNotes.length) {
+      showErrorToast({
+        title  : 'Aucune donnée à mettre en PDF',
+        detail : 'Chargez d\'abord un fichier de notes, ou des données du serveur.',
+        actions: [{ label: '📂 Charger un fichier', style: 'primary', onClick: () => dom.openBtn.click() }],
+      });
+      return;
+    }
+
+    const jsPDFCtor = window.jspdf?.jsPDF;
+    if (!jsPDFCtor) {
+      showToast('Bibliothèque PDF introuvable dans l\'APK', 'error');
+      return;
+    }
+
+    showOverlay('Génération du PDF…');
+    try {
+      const groups = groupNotesByClasseMatiere(rowNotes, rowMatieres);
+      const doc = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      groups.forEach((g, i) => {
+        if (i > 0) doc.addPage();
+        this.#renderPdfGroup(doc, g);
+      });
+
+      const fileName  = this.#buildName(currentMeta, 'pdf');
+      const exportPath = `SaisieNotes/exports/${fileName}`;
+      // Pas d'"encoding" ici (contrairement au CSV en UTF8 texte) : sans
+      // ce paramètre, Filesystem.writeFile attend du base64 binaire, ce
+      // que fournit justement doc.output('datauristring').
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+      await CapPlugins.Filesystem.writeFile({
+        path      : exportPath,
+        directory : CapPlugins.Directory.External,
+        data      : pdfBase64,
+        recursive : true,
+      });
+      const { uri } = await CapPlugins.Filesystem.getUri({
+        path: exportPath, directory: CapPlugins.Directory.External,
+      });
+
+      showToast(`PDF généré — ${fileName}`, 'success', 4000);
+      await CapPlugins.Share.share({
+        title: 'Notes (PDF)',
+        text : fileName,
+        url  : uri,
+        dialogTitle: 'Partager le PDF',
+      }).catch(() => {}); // annulation du partage = pas une erreur
+    } catch (err) {
+      logger.error('ExportManager.exportPdf error', err);
+      showErrorToast({
+        title  : 'Erreur lors de la génération du PDF',
+        detail : err?.message ?? '',
+        actions: [
+          { label: '🔄 Réessayer', style: 'primary', onClick: () => exportManager.exportPdf() },
         ],
       });
     } finally {

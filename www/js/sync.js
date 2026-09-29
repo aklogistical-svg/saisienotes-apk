@@ -636,8 +636,8 @@ class UIController {
       this.#setPwdStatus('Renseignez l\'ancien et le nouveau mot de passe.', 'warn');
       return;
     }
-    if (newPwd.length < 4) {
-      this.#setPwdStatus('Le nouveau mot de passe doit contenir au moins 4 caractères.', 'warn');
+    if (newPwd.length < 6) {
+      this.#setPwdStatus('Le nouveau mot de passe doit contenir au moins 6 caractères.', 'warn');
       return;
     }
     if (newPwd !== newPwd2) {

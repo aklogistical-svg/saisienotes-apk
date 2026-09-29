@@ -5,6 +5,40 @@
    ============================================================ */
 function getCellVal(row, field) { return row[field] ?? ''; }
 
+// Regroupe les notes par (classe, matière) — jamais idmatiere seul : un
+// même idmatiere peut exister sous plusieurs classes (une ligne T_Matiere
+// par classe), donc regrouper sur idmatiere seul mélangerait deux classes
+// dans le même tableau. Utilisé par le PDF (file-io.js) et le Bilan
+// (bilan.js) : logique de regroupement partagée, un seul endroit à
+// corriger si elle change.
+function groupNotesByClasseMatiere(rowNotes, rowMatieres) {
+  const metaByKey = new Map(rowMatieres.map(m => [`${m.fkclasse}|${m.idmatiere}`, m]));
+  const groups = new Map();
+  for (const n of rowNotes) {
+    const key = `${n.fkclasse}|${n.idmatiere}`;
+    if (!groups.has(key)) {
+      const m = metaByKey.get(key);
+      groups.set(key, {
+        fkclasse : n.fkclasse,
+        idmatiere: n.idmatiere,
+        nomclasse: m?.nomclasse || `Classe ${n.fkclasse}`,
+        namemat  : m?.namemat   || `Matière ${n.idmatiere}`,
+        rows: [],
+      });
+    }
+    groups.get(key).rows.push(n);
+  }
+  for (const g of groups.values()) {
+    g.rows.sort((a, b) =>
+      String(a.nomel ?? '').localeCompare(String(b.nomel ?? ''), 'fr') ||
+      String(a.prenomel ?? '').localeCompare(String(b.prenomel ?? ''), 'fr')
+    );
+  }
+  return [...groups.values()].sort((a, b) =>
+    a.nomclasse.localeCompare(b.nomclasse, 'fr') || a.namemat.localeCompare(b.namemat, 'fr')
+  );
+}
+
 function setCellVal(row, field, val) {
   row[field]  = val; row.__dirty = true;
   markUnsaved(); draftManager.schedule();

@@ -26,6 +26,26 @@
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a1.5 1.5 0 0 0-2 2v12a1.5 1.5 0 0 0 2 2h12a1.5 1.5 0 0 0 2-2v-4"/><path d="M10 16c0-5 4-8 9-8"/><path d="M15 4l4 4-4 4"/></svg></span>
     <span class="txt">Exporter</span>
   </button>
+  <div class="more-menu-wrap">
+    <button id="moreBtn" class="hbtn" type="button" aria-haspopup="true" aria-expanded="false" title="Plus d'actions" aria-label="Plus d'actions">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+      <span class="txt">Plus</span>
+    </button>
+    <div id="moreMenu" class="more-menu" role="menu" hidden>
+      <button id="expDownload" class="more-menu-item" role="menuitem" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></span>
+        <span>Télécharger dans Downloads</span>
+      </button>
+      <button id="pdfBtn" class="more-menu-item" role="menuitem" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><text x="7.4" y="16.5" font-size="6.2" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">PDF</text></svg></span>
+        <span>PDF des notes</span>
+      </button>
+      <button id="bilanBtn" class="more-menu-item" role="menuitem" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><path d="M9 3.5h6v2.2a.8.8 0 0 1-.8.8H9.8a.8.8 0 0 1-.8-.8z"/><path d="m8.5 12.5 2 2 4-4.2"/><path d="M8.5 17h7"/></svg></span>
+        <span>Bilan de saisie</span>
+      </button>
+    </div>
+  </div>
   <div class="infosource">
     <button id="netToggle" class="hbtn serve-btn" title="Connexion serveur" aria-label="Connexion serveur">
       <span id="netIndicator" class="serve-indic"></span>
@@ -40,10 +60,6 @@
     <button id="toggleView" class="hbtn" type="button" aria-label="Passer en vue cartes" title="Passer en vue cartes">
       <span class="ico"></span>
       <span class="txt">Cartes</span>
-    </button>
-    <button id="expDownload" class="hbtn" title="Télécharger dans Downloads" aria-label="Télécharger dans Downloads">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></span>
-      <span class="txt">Télécharger</span>
     </button>
     <span id="txtPeriode"></span>
   </div>
@@ -208,7 +224,7 @@
         <input id="oldPwd" type="password" placeholder="Mot de passe actuel" autocomplete="current-password">
 
         <label for="newPwd">Nouveau mot de passe</label>
-        <input id="newPwd" type="password" placeholder="Au moins 4 caractères" autocomplete="new-password">
+        <input id="newPwd" type="password" placeholder="Au moins 6 caractères" autocomplete="new-password">
 
         <label for="newPwd2">Confirmer le nouveau mot de passe</label>
         <input id="newPwd2" type="password" placeholder="Retapez le nouveau mot de passe" autocomplete="new-password">
@@ -225,12 +241,23 @@
   </div>
 </div>
 
+<div id="bilanPage" class="modalg">
+  <div class="modal-content bilan-modal-content">
+    <span class="closeg">&times;</span>
+    <h3>Bilan de saisie</h3>
+    <div id="bilanContent"></div>
+  </div>
+</div>
+
 <!-- Capacitor : Filesystem + Haptics natifs (généré via esbuild, voir capacitor-entry.js) -->
 <script src="capacitor-bundle.js"></script>
 <!-- dexie -->
 <script src="dexie.min.js"></script>
 <!-- papaparse -->
 <script src="papaparse.min.js"></script>
+<!-- jsPDF (export PDF des notes, vendorisé : voir js/vendor/) -->
+<script src="js/vendor/jspdf.umd.min.js"></script>
+<script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <!-- js custom -->
 <script src="js/header-toggle.js"></script>
 <script src="js/core.js"></script>
@@ -238,6 +265,7 @@
 <script src="js/file-io.js"></script>
 <script src="js/ui-feedback.js"></script>
 <script src="js/dataset.js"></script>
+<script src="js/bilan.js"></script>
 <script src="js/render.js"></script>
 <script src="js/numpad.js"></script>
 <script src="js/input-factory.js"></script>

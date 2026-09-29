@@ -51,7 +51,39 @@ function guardBusyClick(btn, fn) {
 
 guardBusyClick(dom.saveBtn,      async () => { await draftManager.flushNow(); await fileManager.save(); });
 guardBusyClick(dom.exportBtn,    ()      => exportManager.export());
-guardBusyClick(dom.expDownload,  ()      => exportManager.downloadToDownloads());
+guardBusyClick(dom.pdfBtn,       ()      => { closeMoreMenu(); return exportManager.exportPdf(); });
+guardBusyClick(dom.bilanBtn,     ()      => { closeMoreMenu(); return BilanManager.open(); });
+guardBusyClick(dom.expDownload,  ()      => { closeMoreMenu(); return exportManager.downloadToDownloads(); });
+
+// ── Menu « Plus » (Télécharger / PDF / Bilan) ──────────────────────────
+// Ces trois actions sont moins fréquentes qu'Ouvrir/Enregistrer/Exporter :
+// les sortir de la rangée d'icônes principale évite de mettre au même
+// niveau visuel une action de tous les jours et une action occasionnelle.
+function closeMoreMenu() {
+  dom.moreMenu.hidden = true;
+  dom.moreBtn.setAttribute('aria-expanded', 'false');
+}
+function toggleMoreMenu() {
+  const willOpen = dom.moreMenu.hidden;
+  dom.moreMenu.hidden = !willOpen;
+  dom.moreBtn.setAttribute('aria-expanded', String(willOpen));
+}
+dom.moreBtn.addEventListener('click', e => {
+  e.stopPropagation();     // sinon le listener document ci-dessous la referme aussitôt
+  toggleMoreMenu();
+});
+// Clic en dehors du menu, ou touche Échap : referme.
+// (sauf si le clic vient du Guide, qui pilote lui-même la visibilité du
+// menu pour ses propres étapes de démonstration — voir guide.js — sinon
+// le clic sur "Suivant" rouvrirait le menu puis le guide-click, en
+// remontant jusqu'ici, le refermerait aussitôt dans le même événement)
+document.addEventListener('click', e => {
+  if (dom.moreMenu.hidden) return;
+  if (dom.moreMenu.contains(e.target) || e.target === dom.moreBtn) return;
+  if (document.getElementById('guideOverlay')?.contains(e.target)) return;
+  closeMoreMenu();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMoreMenu(); });
 
 dom.fClasseSel.addEventListener('change', ()  => populateMatieres(dom.fClasseSel.value));
 dom.fMatiereSel.addEventListener('change', e  => {

@@ -81,6 +81,16 @@ function focusCellule(currentInput, rowOffset, colOffset) {
    HELPERS AFFICHAGE
    ============================================================ */
 function formatForDisplay(v) {
-  return (v === null || v === undefined) ? '' : String(v).replace('.', ',');
+  if (v === null || v === undefined || v === '') return '';
+  const n = Number(v);
+  // Filet de sécurité : si une valeur flottante imprécise arrive malgré
+  // tout jusqu'ici (Single Access mal arrondi côté serveur, calcul local…),
+  // on n'affiche jamais plus de 2 décimales — une note n'en a jamais plus.
+  // 11.449999809265137 → "11,45" au lieu de "11,44999".
+  if (Number.isFinite(n)) {
+    const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+    return String(rounded).replace('.', ',');
+  }
+  return String(v).replace('.', ',');
 }
 
