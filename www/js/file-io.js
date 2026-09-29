@@ -215,11 +215,11 @@ class FileManager {
    ============================================================ */
 class ExportManager {
   // ✅ #3 — reçoit meta en paramètre, ne lit plus le DOM
-  #buildName(meta, ext = 'csv') {
+  #buildName(meta, ext = 'csv', prefix = 'Saisie') {
     const d      = new Date();
     const pad    = n => String(n).padStart(2, '0');
     const profnom = meta?.forprof ?? 'export';
-    return `Saisie_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.${ext}`;
+    return `${prefix}_${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${profnom.replace(/[^\p{L}]/gu, '_')}.${ext}`;
   }
 
   #buildBlob() {
@@ -457,7 +457,7 @@ class ExportManager {
         this.#renderPdfGroup(doc, g);
       });
 
-      const fileName = this.#buildName(currentMeta, 'pdf');
+      const fileName = this.#buildName(currentMeta, 'pdf', 'Releve_notes');
       // doc.output('datauristring') fournit déjà du base64 : c'est ce que
       // DownloadsSaver.saveFile attend (même format que le CSV, où
       // #blobToBase64 produit la même chose à partir d'un Blob texte).
@@ -490,3 +490,4 @@ const draftManager  = new DraftManager(draftStore);
 const fileManager   = new FileManager();
 const exportManager = new ExportManager();
 
+   
