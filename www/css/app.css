@@ -1,4 +1,4 @@
-  :root {
+:root {
     --accent:       #00c97a;
     --accent-dim:   #009f60;
     --danger:       #e74c3c;
@@ -776,12 +776,16 @@
     margin-bottom: .6rem; padding: .1rem .7rem;
   }
   .bilan-group summary {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-    gap: .4rem .6rem; cursor: pointer; user-select: none; padding: .55rem 0; list-style: none;
+    display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between;
+    gap: .5rem; cursor: pointer; user-select: none; padding: .55rem 0; list-style: none;
   }
   .bilan-group summary::-webkit-details-marker { display: none; }
-  .bilan-titre { font-weight: 600; font-size: .88rem; color: #1a2233; }
-  .bilan-summary-right { display: flex; align-items: center; gap: .5rem; }
+  .bilan-titre {
+    font-weight: 600; font-size: .88rem; color: #1a2233;
+    flex: 1 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bilan-summary-right { display: flex; align-items: center; gap: .5rem; flex: 0 0 auto; }
   .bilan-chevron {
     display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; color: var(--muted);
     transition: transform .18s ease;
@@ -870,6 +874,17 @@
   }
   /* ── RESPONSIVE ──────────────────────────────────────── */
   @media(max-width:768px) {
+    /*
+     * MENU « PLUS » — mobile : le menu est ancré au bouton, mais sa largeur
+     * est bornée par la largeur de l'écran. Cela évite qu'un texte long
+     * pousse le menu hors écran sur les petits appareils.
+     */
+    .more-menu {
+      width: min(260px, calc(100vw - 16px));
+      min-width: 0;
+      max-width: calc(100vw - 16px);
+    }
+
     footer, .table-wrap { display: none; }
     .cards-wrap { display: flex; }
     .hbtn { padding: .5rem; gap: 0; }
